@@ -504,12 +504,11 @@ img{max-width:100%}
   </div>
 
   <div class="cw-inp">
-    <input id="cwInput" type="text" placeholder="Ask anything about SJU..." onkeydown="if(event.key==='Enter')cwSend()" autocomplete="off"/>
+    <input id="cwInput" type="text" placeholder="Ask anything about SJU..." autocomplete="off"/>
     <button class="csend" id="cwBtn" onclick="cwSend()">
       <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
     </button>
   </div>
-  <div class="cw-foot">Powered by <b>DeepSeek AI via OpenRouter</b> · Demo by SJU Student</div>
 </div>
 
 <script>
@@ -518,6 +517,19 @@ let isOpen = false;
 
 // Store full conversation history here
 const chatHistory = [];
+
+// Reliable Enter-key handler — attach once the page loads
+document.addEventListener('DOMContentLoaded', function(){
+  const input = document.getElementById('cwInput');
+  if(input){
+    input.addEventListener('keydown', function(e){
+      if(e.key === 'Enter' && !e.shiftKey){
+        e.preventDefault();
+        cwSend();
+      }
+    });
+  }
+});
 
 function toggleChat(){
   isOpen = !isOpen;

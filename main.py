@@ -297,7 +297,7 @@ async def chat(req: ChatRequest):
                 json={
                     "system_instruction": {"parts": [{"text": system}]},
                     "contents": contents,
-                    "generationConfig": {"maxOutputTokens": 500, "temperature": 0.3},
+                    "generationConfig": {"maxOutputTokens": 5000, "temperature": 0.3},
                 }
             )
             data = resp.json()
