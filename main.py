@@ -214,7 +214,7 @@ async def chat(req: ChatRequest):
                     "X-Title": "SJU Chatbot",
                 },
                 json={
-                    "model": "deepseek/deepseek-r1:free",
+                    "model": "meta-llama/llama-3.3-70b-instruct:free",
                     "messages": [
                         {"role": "system", "content": SJU_KNOWLEDGE},
                         {"role": "user",   "content": q}
@@ -234,7 +234,7 @@ async def chat(req: ChatRequest):
                         "Content-Type": "application/json",
                     },
                     json={
-                        "model": "meta-llama/llama-3.3-70b-instruct:free",
+                        "model": "mistralai/mistral-7b-instruct:free",
                         "messages": [
                             {"role": "system", "content": SJU_KNOWLEDGE},
                             {"role": "user",   "content": q}
