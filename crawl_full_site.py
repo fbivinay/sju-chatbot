@@ -6,9 +6,9 @@ Run: python crawl_full_site.py
 import os
 
 # ── PASTE YOUR KEYS HERE ──────────────────────────────────────────────────────
-FIRECRAWL_KEY = os.getenv("FIRECRAWL_API_KEY", "fc-86c9fc0de15a42438925ddf0f3980df2")
+FIRECRAWL_KEY = os.getenv("FIRECRAWL_API_KEY", "")
 SUPABASE_URL  = os.getenv("SUPABASE_URL", "https://mvszfevopamhkratxeak.supabase.co")
-SUPABASE_KEY  = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3pmZXZvcGFtaGtyYXR4ZWFrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MjU1MDA2MiwiZXhwIjoyMDk4MTI2MDYyfQ.QJbCXfRHjwlIl2HpkAavoPPbGGeDLsjWyc3mzvY9D8Y")
+SUPABASE_KEY  = os.getenv("SUPABASE_KEY", "")
 
 from firecrawl import Firecrawl
 from supabase import create_client
