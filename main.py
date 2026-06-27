@@ -1,14 +1,17 @@
 """
-SJU Chatbot - Production Server (Fixed)
-Uses OpenRouter with multiple fallback models.
+SJU Chatbot — Production Server
+Uses Supabase pgvector for RAG + OpenRouter for AI responses.
 """
 import os
 import httpx
+import numpy as np
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from supabase import create_client
+from sentence_transformers import SentenceTransformer
 
 app = FastAPI()
 
@@ -21,7 +24,12 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Try these models in order until one works
+# ── Environment variables (set these in Railway) ───────────────────────────────
+SUPABASE_URL      = os.getenv("SUPABASE_URL", "https://mvszfevopamhkratxeak.supabase.co")
+SUPABASE_KEY      = os.getenv("SUPABASE_KEY", "")
+OPENROUTER_KEY    = os.getenv("OPENROUTER_API_KEY", "")
+
+# ── Free models to try in order ────────────────────────────────────────────────
 FREE_MODELS = [
     "meta-llama/llama-3.3-70b-instruct:free",
     "mistralai/mistral-7b-instruct:free",
@@ -29,115 +37,60 @@ FREE_MODELS = [
     "openrouter/auto",
 ]
 
-SJU_KNOWLEDGE = """
-You are the official AI assistant for St Joseph's University (SJU), Bengaluru.
-Answer students questions accurately and helpfully using this knowledge:
+# ── Load embedding model at startup ───────────────────────────────────────────
+print("Loading embedding model...")
+embedder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+print("Embedding model ready!")
 
-ABOUT SJU:
-- Full name: St Joseph's University, Bengaluru
-- Address: 36, Lalbagh Road (corner of Langford Road), Langford Gardens, Bengaluru - 560027
-- Phone: +91 80 2227 4079 | Email: pro@sju.edu.in | Website: sju.edu.in
-- WhatsApp for admissions: 9480811912
-- Founded: 1882 by Paris Foreign Missionary Fathers. Managed by Jesuits since 1937
-- Became India's first Public-Private University under RUSA 2.0 on 2 July 2022
-- Motto: Fide et Labore (Faith and Toil)
-- NAAC Grade: A++ | UGC Recognised | College of Excellence by UGC
+# ── Connect to Supabase ────────────────────────────────────────────────────────
+print("Connecting to Supabase...")
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+print("Supabase connected!")
 
-RANKINGS (The Week Magazine University Ranking 2026):
-- 49th Rank: Multidisciplinary Universities All India
-- 19th Rank: Multidisciplinary Universities South Zone
-- 18th Rank: Private & Deemed Multidisciplinary Universities All India
-- 8th Rank: Private & Deemed Multidisciplinary Universities South Zone
-- 4th Rank: Private & Deemed Multidisciplinary Universities Karnataka
-- India Today 2025: 6th BCA, 8th BSc, 18th Arts
+# ── System prompt ──────────────────────────────────────────────────────────────
+SYSTEM_PROMPT = """You are the official AI assistant for St Joseph's University (SJU), Bengaluru.
+Your job is to help students with accurate, friendly answers.
 
-SCHOOLS AND PROGRAMMES:
-1. School of Information Technology: BCA, MCA, MSc Computer Science, MSc Big Data Analytics
-2. School of Business: BBA, BCom, MBA, MCom
-3. School of Physical Sciences: BSc/MSc Physics, Mathematics, Statistics, Electronics
-4. School of Life Sciences: BSc/MSc Biotechnology, Microbiology, Food Science
-5. School of Chemical Sciences: BSc/MSc Chemistry (Organic, Analytical)
-6. School of Humanities & Social Sciences: BA/MA Psychology, Economics, History, Sociology
-7. School of Communication & Media Studies: BA Visual Communication, Journalism, MA Media Studies
-8. School of Languages & Literatures: BA/MA English, Kannada, French, Hindi
-9. School of Social Work: BSW, MSW
-Also: PhD programmes in most departments, Certificate courses, Lateral Entry options
+Use ONLY the context provided below to answer the question.
+If the context does not contain the answer, say:
+"I don't have that specific information. Please check sju.edu.in or call 080-2227-4079."
 
-ADMISSIONS 2026-27:
-- Apply online: admissions.sju.edu.in
-- Eligibility: Minimum 50% in qualifying exam
-- UG: merit + entrance test + interview
-- PG: bachelor's degree merit + SJUET + interview
-- UG applications: December - January
-- PG applications: February - April
-- Contact: 080-2227-4079 or WhatsApp 9480811912
+Rules:
+- Never make up information, dates, or numbers not in the context
+- Be friendly and concise
+- Use bullet points for lists
+- End with a helpful next step (link or phone number)
+- Keep answers under 200 words
+- Never confuse topics (sports question = sports answer only)
 
-FEES (approximate):
-- BSc: 65,000 to 1.5 Lakh per year
-- BCA: 1.5 Lakh per year
-- BBA/BCom: 80,000 to 1.2 Lakh per year
-- BA: 50,000 to 80,000 per year
-- PG fees: check admissions.sju.edu.in
+Context from SJU website:
+{context}"""
 
-PLACEMENTS:
-- Department: Centre for Student Placements and Skill Development
-- Top recruiters: Cognizant, Deloitte, Accenture, EY, KPMG, Britannia, Federal Bank, HP India, BioCon, MuSigma, Ditto, Infosys, Wipro, TCS
-- Activities: industry visits, guest lectures, resume prep, mock interviews, internships
+def get_relevant_context(question: str, top_k: int = 5) -> str:
+    """Search Supabase for the most relevant chunks"""
+    try:
+        # Convert question to vector
+        question_vector = embedder.encode(question).tolist()
 
-HOSTEL:
-- Separate hostels for boys and girls on campus
-- Facilities: rooms, mess, Wi-Fi, 24/7 CCTV, warden support
-- Apply: sju.edu.in/services/hostel/university-hostel.php
+        # Search Supabase using pgvector similarity
+        result = supabase.rpc(
+            "match_sju_knowledge",
+            {
+                "query_embedding": question_vector,
+                "match_count": top_k,
+            }
+        ).execute()
 
-SCHOLARSHIPS:
-- Karnataka SSP portal: ssp.postmatric.karnataka.gov.in
-- Ishan Uday: for students from North East India
-- PG Indira Gandhi Scholarship: for single girl child
-- SC/ST Scholarships: via state government portal
-- Vidyaposhak Scholarship: merit + financial need
-- UGC PG Scholarships: for university rank holders
-- More info: sju.edu.in/student-support/scholarships_page
+        if not result.data:
+            return "No relevant information found."
 
-CAMPUS FACILITIES:
-- Digitized classrooms, campus Wi-Fi, science and IT labs
-- Central Library, Auditorium, Cafeteria
-- Sports: football, cricket, basketball, volleyball, badminton courts
-- Observatory, NSS, NCC, Counselling centre, Health facilities
-- Green eco-friendly campus with CCTV surveillance
+        # Join the top results into one context block
+        chunks = [row["content"] for row in result.data]
+        return "\n\n---\n\n".join(chunks)
 
-SPORTS AT SJU:
-- Active sports: football, cricket, basketball, volleyball, badminton, athletics
-- Sports selections and trials announced at the start of each academic semester
-- Check announcements: sju.edu.in/announcements.php
-- Contact Physical Education department on campus
-- Sports page: sju.edu.in/services/sports
-
-STUDENT SUPPORT:
-- Counselling: sju.edu.in/student-support/counselling-services.php
-- Anti-Ragging: sju.edu.in/student-support/antiraggingcell.php
-- Grievance: sju.edu.in/student-support/student-grievance-redressal.php
-- Mid Day Meals programme available
-- Facilities for Differently Abled students
-
-EXAMINATIONS:
-- Timetables: sju.edu.in/examination/exam-time-table.php
-- Notices: sju.edu.in/examination/examinationnotices.php
-- Seating: sju.edu.in/examination/sjuexamseatingarrangement.php
-- Results: sju.edu.in/examination/rank-holders.php
-
-LATEST NOTICES (June 2026):
-- Orientation Notice to all First Year Students 2026-27 (25 May 2026)
-- Extension of Last Date for Convocation and Degree Completion Certificates to 13 June 2026
-- Admissions 2026-27 are open
-
-RULES:
-1. Only use the information above. Never make up dates, fees, or names.
-2. If you don't know something specific, say so honestly and give the right contact or link.
-3. Never confuse topics. Sports question = sports answer only.
-4. Be friendly and concise. Use bullet points for lists.
-5. End every answer with a helpful next step.
-6. Keep answers under 200 words.
-"""
+    except Exception as e:
+        print(f"Supabase search error: {e}")
+        return ""
 
 class ChatRequest(BaseModel):
     question: str
@@ -145,16 +98,21 @@ class ChatRequest(BaseModel):
 @app.post("/chat")
 async def chat(req: ChatRequest):
     q = req.question.strip()
+
     if not q:
         return {"answer": "Please type a question!"}
     if len(q) > 500:
         return {"answer": "Please keep your question a bit shorter."}
+    if not OPENROUTER_KEY:
+        return {"answer": "API key not configured. Please add OPENROUTER_API_KEY in Railway."}
 
-    openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
-    if not openrouter_key:
-        return {"answer": "API key not configured. Please add OPENROUTER_API_KEY in Railway environment variables."}
+    # Step 1: Get relevant context from Supabase
+    context = get_relevant_context(q)
 
-    # Try each model until one works
+    # Step 2: Build prompt with context
+    system_with_context = SYSTEM_PROMPT.format(context=context)
+
+    # Step 3: Ask AI using context
     last_error = ""
     async with httpx.AsyncClient(timeout=30.0) as client:
         for model in FREE_MODELS:
@@ -162,7 +120,7 @@ async def chat(req: ChatRequest):
                 resp = await client.post(
                     "https://openrouter.ai/api/v1/chat/completions",
                     headers={
-                        "Authorization": f"Bearer {openrouter_key}",
+                        "Authorization": f"Bearer {OPENROUTER_KEY}",
                         "Content-Type": "application/json",
                         "HTTP-Referer": "https://sju-chatbot.up.railway.app",
                         "X-Title": "SJU Chatbot",
@@ -170,8 +128,8 @@ async def chat(req: ChatRequest):
                     json={
                         "model": model,
                         "messages": [
-                            {"role": "system", "content": SJU_KNOWLEDGE},
-                            {"role": "user",   "content": q}
+                            {"role": "system", "content": system_with_context},
+                            {"role": "user",   "content": q},
                         ],
                         "max_tokens": 400,
                         "temperature": 0.1,
@@ -180,15 +138,13 @@ async def chat(req: ChatRequest):
 
                 data = resp.json()
 
-                # Check for valid response
                 if "choices" in data and len(data["choices"]) > 0:
                     answer = data["choices"][0]["message"]["content"]
                     if answer and answer.strip():
-                        return {"answer": answer.strip(), "model": model}
+                        return {"answer": answer.strip()}
 
-                # If this model failed, note the error and try next
                 if "error" in data:
-                    last_error = data["error"].get("message", "Unknown error")
+                    last_error = data["error"].get("message", "")
                     continue
 
             except httpx.TimeoutException:
@@ -198,11 +154,9 @@ async def chat(req: ChatRequest):
                 last_error = str(e)
                 continue
 
-    # All models failed
     return {
         "answer": (
-            "I'm having trouble connecting to the AI right now. "
-            "This is usually temporary — please try again in a moment.\n\n"
+            "I'm having trouble right now. Please try again in a moment.\n\n"
             "Or contact SJU directly:\n"
             "📞 080-2227-4079\n"
             "🌐 sju.edu.in\n"
@@ -212,11 +166,10 @@ async def chat(req: ChatRequest):
 
 @app.get("/health")
 def health():
-    key_set = bool(os.getenv("OPENROUTER_API_KEY"))
     return {
         "status": "running",
-        "api_key_configured": key_set,
-        "models_available": FREE_MODELS
+        "supabase": bool(SUPABASE_KEY),
+        "openrouter": bool(OPENROUTER_KEY),
     }
 
 @app.get("/")
