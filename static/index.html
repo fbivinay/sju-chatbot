@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>St Joseph's University, Bengaluru</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:14px;color:#222;background:#fff}
+a{text-decoration:none;color:inherit}
+img{max-width:100%}
+
+/* ── TOP UTILITY BAR ── */
+.topbar{background:#1a1a2e;color:rgba(255,255,255,.75);font-size:11px;padding:5px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px}
+.topbar-left{display:flex;align-items:center;gap:16px}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.topbar a{color:rgba(255,255,255,.7);font-size:11px;display:flex;align-items:center;gap:4px;transition:color .15s}
+.topbar a:hover{color:#C9A84C}
+.topbar-sep{color:rgba(255,255,255,.25)}
+
+/* ── HEADER ── */
+.header{background:#fff;border-bottom:2px solid #e8e8e8;padding:8px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.logo-wrap{display:flex;align-items:center;gap:10px}
+.logo-img{width:70px;height:70px;object-fit:contain}
+.logo-text .l1{font-size:11px;color:#555;letter-spacing:.5px;text-transform:uppercase}
+.logo-text .l2{font-size:22px;font-weight:800;color:#002060;line-height:1.1;letter-spacing:-.3px}
+.logo-text .l3{font-size:10.5px;color:#777;margin-top:2px}
+.header-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.hdr-btn{padding:7px 14px;border-radius:3px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+.hdr-login{background:#002060;color:#fff}
+.hdr-login:hover{background:#003087}
+.hdr-admit{background:#C9A84C;color:#fff}
+.hdr-admit:hover{background:#a8862f}
+.header-social{display:flex;gap:6px;align-items:center}
+.soc-icon{width:26px;height:26px;border-radius:50%;background:#e8e8e8;display:flex;align-items:center;justify-content:center;font-size:11px;color:#444;transition:all .15s;font-weight:700}
+.soc-icon:hover{background:#002060;color:#fff}
+
+/* ── SUB HEADER LINKS ── */
+.sub-header{background:#f5f5f5;border-bottom:1px solid #ddd;padding:5px 20px;display:flex;gap:0;flex-wrap:wrap}
+.sub-header a{font-size:11px;color:#444;padding:4px 10px;border-right:1px solid #ddd;display:flex;align-items:center;gap:4px;transition:color .15s}
+.sub-header a:last-child{border-right:none}
+.sub-header a:hover{color:#002060}
+
+/* ── NAVIGATION ── */
+.nav-wrap{background:#002060;position:sticky;top:0;z-index:500;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.nav{display:flex;align-items:stretch;padding:0 20px;max-width:100%;overflow-x:auto}
+.nav-item{position:relative}
+.nav-item>a{color:rgba(255,255,255,.88);padding:13px 14px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:4px;white-space:nowrap;border-bottom:3px solid transparent;transition:all .2s;cursor:pointer}
+.nav-item>a:hover,.nav-item>a.active{color:#C9A84C;border-bottom-color:#C9A84C;background:rgba(255,255,255,.05)}
+.nav-item>a .arr{font-size:9px;opacity:.6}
+.dropdown{position:absolute;top:100%;left:0;min-width:220px;background:#fff;box-shadow:0 6px 24px rgba(0,0,0,.15);border-top:3px solid #C9A84C;z-index:1000;display:none;flex-direction:column}
+.nav-item:hover .dropdown{display:flex}
+.dropdown a{padding:9px 16px;font-size:12.5px;color:#333;border-bottom:1px solid #f0f0f0;transition:background .1s}
+.dropdown a:last-child{border-bottom:none}
+.dropdown a:hover{background:#f5f8ff;color:#002060;padding-left:20px}
+
+/* ── ANNOUNCEMENT TICKER ── */
+.ticker-bar{background:#FFF9E6;border-bottom:1px solid #F0D060;padding:7px 20px;display:flex;align-items:center;gap:12px;overflow:hidden}
+.ticker-label{background:#002060;color:#fff;padding:3px 10px;border-radius:2px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.ticker-track{overflow:hidden;flex:1;position:relative}
+.ticker-inner{display:inline-flex;gap:0;animation:tickerScroll 40s linear infinite;white-space:nowrap}
+.ticker-inner span{font-size:11.5px;color:#002060;padding:0 40px}
+.ticker-inner span::before{content:"● ";color:#C9A84C;font-size:8px;vertical-align:middle;margin-right:4px}
+@keyframes tickerScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.ticker-track:hover .ticker-inner{animation-play-state:paused}
+
+/* ── HERO SLIDER ── */
+.hero{position:relative;background:linear-gradient(135deg,#001848 0%,#002060 50%,#003580 100%);min-height:420px;display:flex;align-items:center;justify-content:center;overflow:hidden;text-align:center;color:#fff;padding:40px 20px}
+.hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.025'%3E%3Cpath d='M0 0h80v80H0z' fill='none'/%3E%3Ccircle cx='40' cy='40' r='30'/%3E%3C/g%3E%3C/svg%3E")}
+.hero-content{position:relative;max-width:900px}
+.hero-sub{font-size:11px;letter-spacing:2px;text-transform:uppercase;opacity:.65;margin-bottom:8px}
+.hero-title{font-size:42px;font-weight:900;letter-spacing:-1px;line-height:1.1;margin-bottom:6px}
+.hero-title span{color:#C9A84C}
+.hero-motto{font-size:14px;opacity:.7;margin-bottom:28px;font-style:italic}
+.hero-badges{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:32px}
+.h-badge{background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.35);color:#C9A84C;padding:5px 14px;border-radius:20px;font-size:11px;font-weight:600}
+.hero-ranks{display:flex;justify-content:center;gap:24px;flex-wrap:wrap}
+.rank-box{text-align:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:14px 18px;min-width:110px}
+.rank-n{font-size:38px;font-weight:900;color:#C9A84C;line-height:1}
+.rank-n sup{font-size:18px}
+.rank-l{font-size:9.5px;opacity:.65;margin-top:4px;line-height:1.4}
+.hero-week{font-size:11px;opacity:.5;margin-top:20px}
+
+/* ── SECTION ── */
+.section{padding:36px 20px}
+.sec-title{font-size:20px;font-weight:700;color:#002060;margin-bottom:4px}
+.sec-title::after{content:'';display:block;width:48px;height:3px;background:#C9A84C;margin-top:6px;margin-bottom:20px}
+.sec-sub{font-size:13px;color:#666;margin-bottom:20px}
+
+/* ── QUICK LINKS GRID ── */
+.quickgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.qcard{background:#fff;border:1px solid #e8e8e8;border-radius:6px;padding:18px 14px;text-align:center;transition:all .15s;cursor:default;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.qcard:hover{border-color:#002060;box-shadow:0 4px 16px rgba(0,32,96,.1);transform:translateY(-2px)}
+.qcard-icon{font-size:26px;margin-bottom:8px}
+.qcard-title{font-size:13px;font-weight:700;color:#002060;margin-bottom:4px}
+.qcard-text{font-size:11px;color:#777;line-height:1.5}
+
+/* ── STATS BAR ── */
+.stats-bar{background:#002060;padding:28px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:16px;text-align:center}
+.stat-n{font-size:30px;font-weight:900;color:#C9A84C}
+.stat-l{font-size:11px;color:rgba(255,255,255,.65);margin-top:3px}
+
+/* ── SCHOOLS SECTION ── */
+.schools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.school-card{background:#f8f9fd;border-left:4px solid #002060;border-radius:4px;padding:14px;transition:all .15s;cursor:default}
+.school-card:hover{background:#eef2ff;border-left-color:#C9A84C}
+.school-name{font-size:13px;font-weight:700;color:#002060;margin-bottom:4px}
+.school-courses{font-size:11px;color:#666}
+
+/* ── NOTICES SECTION ── */
+.notices-list{list-style:none}
+.notice-item{border-bottom:1px solid #eee;padding:10px 0;display:flex;align-items:flex-start;gap:10px}
+.notice-item:last-child{border-bottom:none}
+.notice-date{background:#002060;color:#fff;font-size:10px;padding:3px 8px;border-radius:3px;white-space:nowrap;flex-shrink:0;font-weight:600}
+.notice-text{font-size:12.5px;color:#333;line-height:1.5}
+
+/* ── FOOTER ── */
+.footer{background:#001040;color:rgba(255,255,255,.7);padding:32px 20px 16px}
+.footer-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:28px;margin-bottom:24px}
+.footer-col h4{color:#C9A84C;font-size:13px;font-weight:700;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px}
+.footer-col p,.footer-col a{font-size:12px;color:rgba(255,255,255,.6);line-height:2;display:block;transition:color .15s}
+.footer-col a:hover{color:#C9A84C}
+.footer-bottom{border-top:1px solid rgba(255,255,255,.1);padding-top:16px;text-align:center;font-size:11px;color:rgba(255,255,255,.4)}
+
+/* ══════════════════════════════════════
+   CHATBOT
+══════════════════════════════════════ */
+#fab{position:fixed;bottom:24px;right:24px;width:58px;height:58px;background:#002060;border:none;border-radius:50%;cursor:pointer;box-shadow:0 4px 20px rgba(0,32,96,.45);display:flex;align-items:center;justify-content:center;z-index:9000;transition:transform .2s,box-shadow .2s}
+#fab:hover{transform:scale(1.1);box-shadow:0 8px 28px rgba(0,32,96,.55)}
+#fab svg{width:26px;height:26px;fill:#fff}
+#fab-pulse{position:absolute;top:-3px;right:-3px;width:18px;height:18px;background:#e63946;border-radius:50%;border:2px solid #fff;font-size:9px;font-weight:800;color:#fff;display:flex;align-items:center;justify-content:center;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+
+#chat-win{position:fixed;bottom:96px;right:24px;width:360px;max-height:560px;background:#fff;border-radius:16px;box-shadow:0 12px 48px rgba(0,0,0,.22);display:flex;flex-direction:column;z-index:8999;border:1px solid rgba(0,32,96,.1);transform:scale(.95) translateY(12px);opacity:0;pointer-events:none;transition:transform .22s ease,opacity .22s ease}
+#chat-win.open{transform:scale(1) translateY(0);opacity:1;pointer-events:all}
+
+.cw-head{background:linear-gradient(135deg,#002060,#003580);color:#fff;padding:14px 16px;border-radius:16px 16px 0 0;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.cw-av{width:40px;height:40px;background:#C9A84C;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#002060;flex-shrink:0}
+.cw-info{flex:1}
+.cw-name{font-weight:700;font-size:14px}
+.cw-status{font-size:11px;opacity:.7;margin-top:1px;display:flex;align-items:center;gap:4px}
+.cw-dot{width:7px;height:7px;background:#4ade80;border-radius:50%;display:inline-block}
+.cw-close{background:rgba(255,255,255,.12);border:none;border-radius:50%;width:28px;height:28px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0}
+.cw-close:hover{background:rgba(255,255,255,.25)}
+
+.cw-chips{padding:8px 12px;background:#f0f4fc;border-bottom:1px solid #dde6f4;display:flex;flex-wrap:wrap;gap:5px;flex-shrink:0}
+.cchip{background:#fff;border:1px solid #002060;color:#002060;border-radius:20px;padding:4px 11px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
+.cchip:hover{background:#002060;color:#fff}
+
+.cw-msgs{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:10px;background:#f5f7fb;min-height:0}
+.cmsg{display:flex;gap:8px;align-items:flex-end}
+.cmsg.bot{align-self:flex-start;max-width:90%}
+.cmsg.usr{align-self:flex-end;flex-direction:row-reverse;max-width:88%}
+.cbub{padding:10px 14px;border-radius:18px;font-size:13px;line-height:1.65}
+.cmsg.bot .cbub{background:#fff;color:#1a1a1a;border-bottom-left-radius:4px;border:1px solid #dde6f0;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.cmsg.usr .cbub{background:#002060;color:#fff;border-bottom-right-radius:4px}
+.cav{width:28px;height:28px;background:#C9A84C;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#002060;flex-shrink:0}
+
+@keyframes td{0%,60%,100%{transform:translateY(0);opacity:.3}30%{transform:translateY(-5px);opacity:1}}
+.tdot{width:7px;height:7px;border-radius:50%;background:#002060;display:inline-block;animation:td 1.2s ease-in-out infinite;margin:0 2px}
+
+.cw-inp{padding:10px 12px;border-top:1px solid #e4ecf4;display:flex;gap:8px;background:#fff;border-radius:0 0 16px 16px;flex-shrink:0}
+.cw-inp input{flex:1;border:1.5px solid #dde6f0;border-radius:24px;padding:9px 15px;font-size:13px;font-family:inherit;outline:none;background:#f5f7fb;color:#1a1a1a;transition:border-color .15s,background .15s}
+.cw-inp input:focus{border-color:#002060;background:#fff}
+.csend{width:38px;height:38px;background:#002060;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .15s}
+.csend:disabled{opacity:.4;cursor:not-allowed}
+.csend svg{width:16px;height:16px;fill:#fff}
+.cw-foot{text-align:center;font-size:10px;color:#bbb;padding:4px 0 6px;background:#fff;border-top:1px solid #f0f0f0;border-radius:0 0 16px 16px;flex-shrink:0}
+.cw-foot b{color:#002060}
+</style>
+</head>
+<body>
+
+<!-- TOP UTILITY BAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <span>📍 36, Lalbagh Road, Bengaluru-560027</span>
+    <span class="topbar-sep">|</span>
+    <a href="tel:08022274079">📞 080-2227-4079</a>
+    <span class="topbar-sep">|</span>
+    <a href="mailto:pro@sju.edu.in">✉ pro@sju.edu.in</a>
+  </div>
+  <div class="topbar-right">
+    <a href="https://alumni.sju.edu.in/" target="_blank">Alumni</a>
+    <span class="topbar-sep">|</span>
+    <a href="https://sjric.res.in/" target="_blank">Research</a>
+    <span class="topbar-sep">|</span>
+    <a href="https://www.sju.edu.in/about/iqac/iqac.php" target="_blank">IQAC</a>
+    <span class="topbar-sep">|</span>
+    <a href="https://www.sju.edu.in/announcements.php" target="_blank">Notices</a>
+    <span class="topbar-sep">|</span>
+    <a href="https://www.sju.edu.in/library/library.php" target="_blank">Library</a>
+    <span class="topbar-sep">|</span>
+    <a href="https://www.sju.edu.in/internationalstudents/internationalstudents.php" target="_blank">International Students</a>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo-wrap">
+    <img class="logo-img" src="https://www.sju.edu.in/assets/img/st-joseph-university-logo.png" alt="SJU Logo" onerror="this.style.display='none'">
+    <div class="logo-text">
+      <div class="l1">St Joseph's University</div>
+      <div class="l2">BENGALURU INDIA</div>
+      <div class="l3">A Public-Private-Partnership University · RUSA 2.0 · NAAC A++</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="header-social">
+      <a class="soc-icon" href="https://www.facebook.com/sjubengaluru" target="_blank">f</a>
+      <a class="soc-icon" href="https://twitter.com/sjcbengaluru" target="_blank">𝕏</a>
+      <a class="soc-icon" href="https://www.instagram.com/sjubengaluru/" target="_blank">📷</a>
+      <a class="soc-icon" href="https://www.youtube.com/@SJUBengaluru" target="_blank">▶</a>
+    </div>
+    <a href="https://www.sju.edu.in/erp-login.php" target="_blank" class="hdr-btn hdr-login">Login</a>
+    <a href="https://admissions.sju.edu.in/" target="_blank" class="hdr-btn hdr-admit">Admissions Open</a>
+  </div>
+</div>
+
+<!-- SUB HEADER -->
+<div class="sub-header">
+  <a href="https://sjudata.s3.ap-south-1.amazonaws.com/University+Docs/UGC-Proforma_.pdf" target="_blank">📄 UGC Proforma</a>
+  <a href="https://www.sju.edu.in/about/iqac/sju-iqac-nirf.php" target="_blank">🏆 NIRF</a>
+  <a href="https://www.sju.edu.in/admissions/admissions.php" target="_blank">🎓 Admissions</a>
+  <a href="https://www.sju.edu.in/publicself-disclosure.php" target="_blank">📋 Public Disclosure</a>
+  <a href="https://www.sju.edu.in/climateandworldclock.php" target="_blank">🌍 Climate Clock</a>
+  <a href="https://www.sju.edu.in/bulletin/sjuannualreport.php" target="_blank">📊 Annual Report</a>
+  <a href="https://wa.me/9480811912" target="_blank">💬 WhatsApp</a>
+</div>
+
+<!-- NAVIGATION -->
+<div class="nav-wrap">
+  <nav class="nav">
+
+    <div class="nav-item"><a class="active" href="#">Home</a></div>
+
+    <div class="nav-item">
+      <a href="#">About Us <span class="arr">▾</span></a>
+      <div class="dropdown">
+        <a href="https://www.sju.edu.in/about/about-the-university.php" target="_blank">About the University</a>
+        <a href="https://www.sju.edu.in/about/milestones.php" target="_blank">History & Milestones</a>
+        <a href="https://www.sju.edu.in/about/vision-and-mission.php" target="_blank">Vision and Mission</a>
+        <a href="https://www.sju.edu.in/about/management.php" target="_blank">Management</a>
+        <a href="https://www.sju.edu.in/about/faculty-members.php" target="_blank">Teaching Staff</a>
+        <a href="https://www.sju.edu.in/about/sju-schools.php" target="_blank">Schools & Departments</a>
+        <a href="https://www.sju.edu.in/about/contact-us.php" target="_blank">Contact Us</a>
+      </div>
+    </div>
+
+    <div class="nav-item">
+      <a href="#">Academics <span class="arr">▾</span></a>
+      <div class="dropdown">
+        <a href="https://www.sju.edu.in/school-of-business/school-of-business.php" target="_blank">School of Business</a>
+        <a href="https://www.sju.edu.in/school-of-information-technology/school-of-information-technology.php" target="_blank">School of Information Technology</a>
+        <a href="https://www.sju.edu.in/school-of-physical-sciences/school-of-physical-sciences.php" target="_blank">School of Physical Sciences</a>
+        <a href="https://www.sju.edu.in/school-of-life-sciences/school-of-life-sciences.php" target="_blank">School of Life Sciences</a>
+        <a href="https://www.sju.edu.in/school-of-chemical-sciences/school-of-chemical-sciences.php" target="_blank">School of Chemical Sciences</a>
+        <a href="https://www.sju.edu.in/school-of-humanities-and-social-sciences/school-of-humanities-and-social-sciences.php" target="_blank">School of Humanities & Social Sciences</a>
+        <a href="https://www.sju.edu.in/school-of-communication-media-studies/school-of-communication-media-studies.php" target="_blank">School of Communication & Media</a>
+        <a href="https://www.sju.edu.in/school-of-social-work/school-of-social-work.php" target="_blank">School of Social Work</a>
+      </div>
+    </div>
+
+    <div class="nav-item">
+      <a href="#">Student Support <span class="arr">▾</span></a>
+      <div class="dropdown">
+        <a href="https://www.sju.edu.in/student-support/scholarships_page" target="_blank">Scholarships</a>
+        <a href="https://www.sju.edu.in/services/hostel/university-hostel.php" target="_blank">Hostel</a>
+        <a href="https://www.sju.edu.in/student-support/counselling-services.php" target="_blank">Counselling Services</a>
+        <a href="https://www.sju.edu.in/student-support/antiraggingcell.php" target="_blank">Anti-Ragging Cell</a>
+        <a href="https://www.sju.edu.in/student-support/student-grievance-redressal.php" target="_blank">Grievance Redressal</a>
+        <a href="https://www.sju.edu.in/student-support/lateralentry.php" target="_blank">Lateral Entry</a>
+        <a href="https://www.sju.edu.in/student-support/medicalfacilities.php" target="_blank">Health Facilities</a>
+      </div>
+    </div>
+
+    <div class="nav-item">
+      <a href="#">Examinations <span class="arr">▾</span></a>
+      <div class="dropdown">
+        <a href="https://www.sju.edu.in/examination/exam-time-table.php" target="_blank">Exam Timetable</a>
+        <a href="https://www.sju.edu.in/examination/examinationnotices.php" target="_blank">Exam Notices</a>
+        <a href="https://www.sju.edu.in/examination/sjuexamseatingarrangement.php" target="_blank">Seating Arrangements</a>
+        <a href="https://www.sju.edu.in/examination/toppers.php" target="_blank">Exam Toppers</a>
+        <a href="https://www.sju.edu.in/examination/rank-holders.php" target="_blank">Rank Holders</a>
+        <a href="https://www.sju.edu.in/examination/applicationform.php" target="_blank">Application Forms</a>
+      </div>
+    </div>
+
+    <div class="nav-item">
+      <a href="#">Services <span class="arr">▾</span></a>
+      <div class="dropdown">
+        <a href="https://www.sju.edu.in/services/sju-campus-facilities.php" target="_blank">Campus Facilities</a>
+        <a href="https://www.sju.edu.in/services/certificate-courses.php" target="_blank">Certificate Courses</a>
+        <a href="https://www.sju.edu.in/services/sports" target="_blank">Sports</a>
+        <a href="https://www.sju.edu.in/services/sju-nss/national-service-scheme.php" target="_blank">NSS</a>
+        <a href="https://www.sju.edu.in/services/sju-national-cadet-corps.php" target="_blank">NCC</a>
+        <a href="https://www.sju.edu.in/news-archive.php" target="_blank">News & Events</a>
+        <a href="https://www.sju.edu.in/announcements.php" target="_blank">Announcements</a>
+      </div>
+    </div>
+
+    <div class="nav-item">
+      <a href="#">Bulletin <span class="arr">▾</span></a>
+      <div class="dropdown">
+        <a href="https://www.sju.edu.in/bulletin/sjubeacon.php" target="_blank">The Beacon</a>
+        <a href="https://www.sju.edu.in/bulletin/sjuphotobeacon.php" target="_blank">Photo Beacon</a>
+        <a href="https://www.sju.edu.in/bulletin/sjucommunique.php" target="_blank">Communique</a>
+        <a href="https://www.sju.edu.in/bulletin/magazines.php" target="_blank">University Magazines</a>
+        <a href="https://www.sju.edu.in/bulletin/sjuannualreport.php" target="_blank">Annual Report</a>
+      </div>
+    </div>
+
+    <div class="nav-item">
+      <a href="#">Why SJU <span class="arr">▾</span></a>
+      <div class="dropdown">
+        <a href="https://www.sju.edu.in/whysju/career.php" target="_blank">Careers</a>
+        <a href="https://www.sju.edu.in/whysju/shift3.php" target="_blank">Shift-III</a>
+      </div>
+    </div>
+
+    <div class="nav-item">
+      <a href="#">Admissions <span class="arr">▾</span></a>
+      <div class="dropdown">
+        <a href="https://www.sju.edu.in/admissions/admissions.php" target="_blank">Admission Process</a>
+        <a href="https://admissions.sju.edu.in/" target="_blank">Apply Online</a>
+        <a href="https://sjub.sju.edu.in/" target="_blank">B-Block Admissions 2026</a>
+        <a href="https://www.sju.edu.in/student-support/sjureadmission.php" target="_blank">Readmissions 2026-27</a>
+      </div>
+    </div>
+
+  </nav>
+</div>
+
+<!-- ANNOUNCEMENT TICKER -->
+<div class="ticker-bar">
+  <span class="ticker-label">📢 Announcements</span>
+  <div class="ticker-track">
+    <div class="ticker-inner">
+      <span>25 May 2026: Orientation Notice to all First Year Students 2026-27</span>
+      <span>27 May 2026: Extension of Last Date — Convocation and Degree Completion Certificates — 27.05.2026 to 13.06.2026</span>
+      <span>Admissions 2026-27 are OPEN — Apply at admissions.sju.edu.in</span>
+      <span>The Week Magazine University Ranking 2026 — SJU Ranked 4th in Karnataka (Private & Deemed)</span>
+      <span>SJU ranked 49th All India Multidisciplinary Universities — The Week 2026</span>
+      <!-- duplicate for seamless loop -->
+      <span>25 May 2026: Orientation Notice to all First Year Students 2026-27</span>
+      <span>27 May 2026: Extension of Last Date — Convocation and Degree Completion Certificates — 27.05.2026 to 13.06.2026</span>
+      <span>Admissions 2026-27 are OPEN — Apply at admissions.sju.edu.in</span>
+      <span>The Week Magazine University Ranking 2026 — SJU Ranked 4th in Karnataka (Private & Deemed)</span>
+      <span>SJU ranked 49th All India Multidisciplinary Universities — The Week 2026</span>
+    </div>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-content">
+    <div class="hero-sub">St Joseph's University, Bengaluru</div>
+    <div class="hero-title">PROUD TO BE <span>RANKED AMONG</span><br>INDIA'S BEST!</div>
+    <div class="hero-motto">Fide et Labore — Academic Excellence · Social Concern · Character Formation</div>
+    <div class="hero-badges">
+      <span class="h-badge">NAAC A++ Accredited</span>
+      <span class="h-badge">India's 1st Public-Private University · RUSA 2.0</span>
+      <span class="h-badge">UGC College of Excellence</span>
+      <span class="h-badge">Est. 1882</span>
+    </div>
+    <div class="hero-ranks">
+      <div class="rank-box"><div class="rank-n">49<sup>th</sup></div><div class="rank-l">Multidisciplinary Universities<br>(All India)</div></div>
+      <div class="rank-box"><div class="rank-n">19<sup>th</sup></div><div class="rank-l">Multidisciplinary Universities<br>(South Zone)</div></div>
+      <div class="rank-box"><div class="rank-n">18<sup>th</sup></div><div class="rank-l">Pvt & Deemed Multidisciplinary<br>(All India)</div></div>
+      <div class="rank-box"><div class="rank-n">8<sup>th</sup></div><div class="rank-l">Pvt & Deemed Multidisciplinary<br>(South Zone)</div></div>
+      <div class="rank-box"><div class="rank-n">4<sup>th</sup></div><div class="rank-l">Pvt & Deemed Multidisciplinary<br>(Karnataka)</div></div>
+    </div>
+    <div class="hero-week">Following rank declared by "The Week Magazine University Ranking 2026"</div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div><div class="stat-n">140+</div><div class="stat-l">Years of Excellence</div></div>
+  <div><div class="stat-n">9</div><div class="stat-l">Schools of Study</div></div>
+  <div><div class="stat-n">50+</div><div class="stat-l">Programmes</div></div>
+  <div><div class="stat-n">A++</div><div class="stat-l">NAAC Grade</div></div>
+  <div><div class="stat-n">5000+</div><div class="stat-l">Students</div></div>
+  <div><div class="stat-n">200+</div><div class="stat-l">Placement Companies</div></div>
+</div>
+
+<!-- QUICK LINKS -->
+<div class="section" style="background:#f8f9fd">
+  <div class="sec-title">Quick Links</div>
+  <div class="quickgrid">
+    <div class="qcard"><div class="qcard-icon">🎓</div><div class="qcard-title">Admissions 2026-27</div><div class="qcard-text">Applications open for UG & PG programmes</div></div>
+    <div class="qcard"><div class="qcard-icon">📚</div><div class="qcard-title">Academics</div><div class="qcard-text">9 schools across arts, science, commerce & IT</div></div>
+    <div class="qcard"><div class="qcard-icon">💼</div><div class="qcard-title">Placements</div><div class="qcard-text">Top companies recruit from SJU every year</div></div>
+    <div class="qcard"><div class="qcard-icon">🏠</div><div class="qcard-title">Hostel</div><div class="qcard-text">Separate facilities for boys and girls</div></div>
+    <div class="qcard"><div class="qcard-icon">💰</div><div class="qcard-title">Scholarships</div><div class="qcard-text">Multiple scholarships for eligible students</div></div>
+    <div class="qcard"><div class="qcard-icon">📋</div><div class="qcard-title">Examinations</div><div class="qcard-text">Timetables, results and seating plans</div></div>
+    <div class="qcard"><div class="qcard-icon">⚽</div><div class="qcard-title">Sports</div><div class="qcard-text">Football, cricket, basketball, badminton & more</div></div>
+    <div class="qcard"><div class="qcard-icon">🔬</div><div class="qcard-title">Research</div><div class="qcard-text">First Karnataka college with a Research Centre</div></div>
+  </div>
+</div>
+
+<!-- SCHOOLS -->
+<div class="section">
+  <div class="sec-title">Schools & Programmes</div>
+  <div class="schools-grid">
+    <div class="school-card"><div class="school-name">School of Information Technology</div><div class="school-courses">BCA · MCA · MSc CS · MSc Big Data Analytics</div></div>
+    <div class="school-card"><div class="school-name">School of Business</div><div class="school-courses">BBA · BCom · MBA · MCom</div></div>
+    <div class="school-card"><div class="school-name">School of Physical Sciences</div><div class="school-courses">BSc/MSc Physics · Mathematics · Statistics</div></div>
+    <div class="school-card"><div class="school-name">School of Life Sciences</div><div class="school-courses">BSc/MSc Biotechnology · Microbiology · Food Science</div></div>
+    <div class="school-card"><div class="school-name">School of Chemical Sciences</div><div class="school-courses">BSc/MSc Chemistry (Organic & Analytical)</div></div>
+    <div class="school-card"><div class="school-name">School of Humanities & Social Sciences</div><div class="school-courses">BA/MA Psychology · Economics · History · Sociology</div></div>
+    <div class="school-card"><div class="school-name">School of Communication & Media</div><div class="school-courses">BA Visual Communication · Journalism · MA Media</div></div>
+    <div class="school-card"><div class="school-name">School of Social Work</div><div class="school-courses">BSW · MSW</div></div>
+    <div class="school-card"><div class="school-name">School of Languages & Literatures</div><div class="school-courses">BA/MA English · Kannada · French · Hindi</div></div>
+  </div>
+</div>
+
+<!-- NOTICES -->
+<div class="section" style="background:#f8f9fd">
+  <div class="sec-title">Latest Notices</div>
+  <ul class="notices-list">
+    <li class="notice-item"><span class="notice-date">27 May 2026</span><span class="notice-text">Extension of Last Date for Application and Fee Payment – Convocation and Degree Completion Certificates – From 27.05.2026 to 13.06.2026</span></li>
+    <li class="notice-item"><span class="notice-date">25 May 2026</span><span class="notice-text">Orientation Notice to all First Year Students 2026-27</span></li>
+    <li class="notice-item"><span class="notice-date">Admissions</span><span class="notice-text">Admissions 2026-27 are now OPEN for all UG and PG programmes. Apply at admissions.sju.edu.in</span></li>
+    <li class="notice-item"><span class="notice-date">Rankings</span><span class="notice-text">SJU ranked among India's Best — The Week Magazine University Rankings 2026. 49th All India, 4th in Karnataka.</span></li>
+  </ul>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div class="footer-grid">
+    <div class="footer-col">
+      <h4>St Joseph's University</h4>
+      <p>36, Lalbagh Road</p>
+      <p>Bengaluru – 560027</p>
+      <p>Karnataka, India</p>
+      <p style="margin-top:8px">📞 080-2227-4079</p>
+      <p>✉ pro@sju.edu.in</p>
+    </div>
+    <div class="footer-col">
+      <h4>Academics</h4>
+      <a href="https://www.sju.edu.in/school-of-information-technology/school-of-information-technology.php" target="_blank">School of IT</a>
+      <a href="https://www.sju.edu.in/school-of-business/school-of-business.php" target="_blank">School of Business</a>
+      <a href="https://www.sju.edu.in/school-of-life-sciences/school-of-life-sciences.php" target="_blank">School of Life Sciences</a>
+      <a href="https://www.sju.edu.in/school-of-physical-sciences/school-of-physical-sciences.php" target="_blank">School of Physical Sciences</a>
+      <a href="https://www.sju.edu.in/about/sju-schools.php" target="_blank">All Schools</a>
+    </div>
+    <div class="footer-col">
+      <h4>Student Links</h4>
+      <a href="https://admissions.sju.edu.in/" target="_blank">Apply Online</a>
+      <a href="https://www.sju.edu.in/student-support/scholarships_page" target="_blank">Scholarships</a>
+      <a href="https://www.sju.edu.in/services/hostel/university-hostel.php" target="_blank">Hostel</a>
+      <a href="https://www.sju.edu.in/examination/exam-time-table.php" target="_blank">Exam Timetable</a>
+      <a href="https://www.sju.edu.in/placements/about-placements.php" target="_blank">Placements</a>
+    </div>
+    <div class="footer-col">
+      <h4>About</h4>
+      <a href="https://www.sju.edu.in/about/milestones.php" target="_blank">History & Milestones</a>
+      <a href="https://www.sju.edu.in/about/vision-and-mission.php" target="_blank">Vision & Mission</a>
+      <a href="https://www.sju.edu.in/about/iqac/iqac.php" target="_blank">IQAC</a>
+      <a href="https://www.sju.edu.in/publicself-disclosure.php" target="_blank">Public Disclosure</a>
+      <a href="https://www.sju.edu.in/about/contact-us.php" target="_blank">Contact Us</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    © 2026 St Joseph's University, Bengaluru &nbsp;·&nbsp;
+    A Public-Private-Partnership University under RUSA 2.0 of MHRD (Govt of India) · Karnataka Govt. Act No. 24 of 2021
+    <br><br>
+    <span style="color:#C9A84C;font-size:10px">⚡ AI Chatbot demo built by [Your Name] · MSc Big Data Analytics · SJU 2025-26</span>
+  </div>
+</div>
+
+<!-- ══════════ CHATBOT ══════════ -->
+<button id="fab" onclick="toggleChat()" aria-label="Open SJU AI Chatbot">
+  <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+  <div id="fab-pulse">AI</div>
+</button>
+
+<div id="chat-win">
+  <div class="cw-head">
+    <div class="cw-av">SJ</div>
+    <div class="cw-info">
+      <div class="cw-name">SJU Assistant</div>
+      <div class="cw-status"><span class="cw-dot"></span> Online · Powered by AI</div>
+    </div>
+    <button class="cw-close" onclick="toggleChat()">✕</button>
+  </div>
+
+  <div class="cw-chips">
+    <button class="cchip" onclick="ask('What courses does SJU offer?')">Courses</button>
+    <button class="cchip" onclick="ask('How do I apply for admission 2026?')">Apply</button>
+    <button class="cchip" onclick="ask('Tell me about placements at SJU')">Placements</button>
+    <button class="cchip" onclick="ask('Is hostel available?')">Hostel</button>
+    <button class="cchip" onclick="ask('What scholarships are available?')">Scholarships</button>
+    <button class="cchip" onclick="ask('What are the fees for BCA?')">Fees</button>
+    <button class="cchip" onclick="ask('Tell me about sports at SJU')">Sports</button>
+  </div>
+
+  <div class="cw-msgs" id="cwMsgs">
+    <div class="cmsg bot">
+      <div class="cav">SJ</div>
+      <div class="cbub">👋 Hi! I'm the SJU Assistant.<br><br>Ask me anything about <strong>courses, admissions, fees, placements, hostel, scholarships, sports</strong> or campus life at St Joseph's University!</div>
+    </div>
+  </div>
+
+  <div class="cw-inp">
+    <input id="cwInput" type="text" placeholder="Ask anything about SJU..." onkeydown="if(event.key==='Enter')cwSend()" autocomplete="off"/>
+    <button class="csend" id="cwBtn" onclick="cwSend()">
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
+  <div class="cw-foot">Powered by <b>DeepSeek AI via OpenRouter</b> · Demo by SJU Student</div>
+</div>
+
+<script>
+// ── Chatbot with conversation memory ──────────────────────────────────────
+let isOpen = false;
+
+// Store full conversation history here
+const chatHistory = [];
+
+function toggleChat(){
+  isOpen = !isOpen;
+  document.getElementById('chat-win').classList.toggle('open', isOpen);
+  if(isOpen){
+    document.getElementById('fab-pulse').style.display='none';
+    document.getElementById('cwInput').focus();
+  }
+}
+
+function ask(q){
+  if(!isOpen) toggleChat();
+  document.getElementById('cwInput').value = q;
+  cwSend();
+}
+
+function addMsg(text, role){
+  const box = document.getElementById('cwMsgs');
+  const d = document.createElement('div');
+  d.className = 'cmsg ' + role;
+  const content = text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');
+  if(role==='bot'){
+    d.innerHTML=`<div class="cav">SJ</div><div class="cbub">${content}</div>`;
+  } else {
+    d.innerHTML=`<div class="cbub">${content}</div>`;
+  }
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+}
+
+function showTyping(){
+  const box = document.getElementById('cwMsgs');
+  const d = document.createElement('div');
+  d.className='cmsg bot'; d.id='cwTyping';
+  d.innerHTML=`<div class="cav">SJ</div><div class="cbub"><span class="tdot" style="animation-delay:0s"></span><span class="tdot" style="animation-delay:.2s"></span><span class="tdot" style="animation-delay:.4s"></span></div>`;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+}
+
+async function cwSend(){
+  const inp = document.getElementById('cwInput');
+  const btn = document.getElementById('cwBtn');
+  const q = inp.value.trim();
+  if(!q || btn.disabled) return;
+
+  inp.value='';
+  btn.disabled=true;
+  addMsg(q, 'usr');
+  showTyping();
+
+  try {
+    const r = await fetch('/chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        question: q,
+        history: chatHistory        // send full conversation history
+      })
+    });
+    const data = await r.json();
+    document.getElementById('cwTyping')?.remove();
+
+    const answer = data.answer || 'Sorry, something went wrong.';
+    addMsg(answer, 'bot');
+
+    // Save this exchange to history
+    chatHistory.push({role: 'user',      content: q});
+    chatHistory.push({role: 'assistant', content: answer});
+
+    // Keep only last 20 messages to avoid getting too large
+    if(chatHistory.length > 20) chatHistory.splice(0, 2);
+
+  } catch(e) {
+    document.getElementById('cwTyping')?.remove();
+    addMsg('Sorry, something went wrong. Please try again.', 'bot');
+  } finally {
+    btn.disabled=false;
+    inp.focus();
+  }
+}
+</script>
+</body>
+</html>
