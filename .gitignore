@@ -1,0 +1,12 @@
+.env
+.env.txt
+_env.txt
+scrape_playwright.py
+crawl_urls.py
+diagnose.py
+crawl_full_site.py
+setup_database.py
+ingest.py
+page_dump.html
+__pycache__/
+*.pyc
