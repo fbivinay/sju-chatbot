@@ -238,6 +238,29 @@ RULES:
 """ + KNOWLEDGE
 
 
+# Common student abbreviations -> how the website actually writes them
+ABBREV = {
+    "bda": "big data analytics",
+    "msc": "m.sc",
+    "mca": "computer applications",
+    "bca": "computer applications",
+    "cs": "computer science",
+    "ai": "artificial intelligence",
+    "ml": "machine learning",
+    "eco": "economics",
+    "psych": "psychology",
+    "biotech": "biotechnology",
+    "micro": "microbiology",
+    "mba": "business administration",
+    "bba": "business administration",
+    "mcom": "commerce",
+    "bcom": "commerce",
+    "msw": "social work",
+    "bsw": "social work",
+    "dept": "department",
+    "fees": "fee",
+}
+
 def search_supabase(question: str) -> str:
     """Get real crawled content from Supabase relevant to the question."""
     if not sb:
@@ -246,8 +269,18 @@ def search_supabase(question: str) -> str:
         stop = {"what","when","where","how","is","are","the","a","an","at","in","of",
                 "for","to","do","does","tell","me","about","i","can","will","which",
                 "who","sju","college","university","please","give","yes","more","many","much"}
-        words = [w.lower().strip("?.,!:;") for w in question.split()
-                 if w.lower() not in stop and len(w) > 2]
+        raw = [w.lower().strip("?.,!:;") for w in question.split()
+               if w.lower() not in stop and len(w) > 1]
+        # Expand abbreviations: 'bda' also searches 'big data analytics'
+        words = []
+        for w in raw:
+            if w in ABBREV:
+                words.extend(ABBREV[w].split())
+            if len(w) > 2:
+                words.append(w)
+        # de-duplicate, keep order
+        seen_w = set()
+        words = [w for w in words if not (w in seen_w or seen_w.add(w))]
         if not words:
             return ""
 
