@@ -167,6 +167,27 @@ img{max-width:100%}
 .csend svg{width:16px;height:16px;fill:#fff}
 .cw-foot{text-align:center;font-size:10px;color:#bbb;padding:4px 0 6px;background:#fff;border-top:1px solid #f0f0f0;border-radius:0 0 16px 16px;flex-shrink:0}
 .cw-foot b{color:#002060}
+
+/* ── Admission Assistant components ── */
+.cw-startover{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:16px;padding:4px 12px;font-size:11px;cursor:pointer;font-family:inherit;transition:background .15s;white-space:nowrap}
+.cw-startover:hover{background:rgba(255,255,255,.3)}
+.lvl-btns{display:flex;gap:10px;margin:6px 0 2px 36px}
+.lvl-btn{flex:1;background:#fff;border:2px solid #002060;color:#002060;border-radius:12px;padding:14px 10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;text-align:center}
+.lvl-btn:hover{background:#002060;color:#fff;transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,32,96,.25)}
+.lvl-btn small{display:block;font-size:10px;font-weight:400;opacity:.7;margin-top:3px}
+.opt-cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 2px 36px}
+.opt-card{background:#fff;border:1.5px solid #dde6f4;border-radius:10px;padding:11px 10px;font-size:12px;font-weight:600;color:#002060;cursor:pointer;font-family:inherit;transition:all .15s;text-align:left;display:flex;align-items:center;gap:7px}
+.opt-card:hover{border-color:#C9A84C;background:#fffbf0;transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.08)}
+.opt-card .oc-ic{font-size:16px}
+.search-wrap{position:relative;flex:1}
+.search-drop{position:absolute;bottom:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid #dde6f4;border-radius:12px;box-shadow:0 -6px 24px rgba(0,0,0,.14);max-height:220px;overflow-y:auto;display:none;z-index:50}
+.search-drop.show{display:block}
+.sd-item{padding:10px 14px;font-size:12.5px;color:#333;cursor:pointer;border-bottom:1px solid #f4f6fa;transition:background .1s}
+.sd-item:last-child{border-bottom:none}
+.sd-item:hover,.sd-item.active{background:#eef3ff;color:#002060;font-weight:600}
+.sd-empty{padding:10px 14px;font-size:12px;color:#999}
+.link-card{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1.5px solid #C9A84C;border-radius:10px;padding:9px 14px;font-size:12.5px;font-weight:600;color:#002060;text-decoration:none;margin-top:6px;transition:all .15s}
+.link-card:hover{background:#fffbf0;box-shadow:0 3px 10px rgba(201,168,76,.3)}
 </style>
 </head>
 <body>
@@ -480,138 +501,326 @@ img{max-width:100%}
   <div class="cw-head">
     <div class="cw-av">SJ</div>
     <div class="cw-info">
-      <div class="cw-name">SJU Assistant</div>
-      <div class="cw-status"><span class="cw-dot"></span> Online · Powered by AI</div>
+      <div class="cw-name">SJU Admission Assistant</div>
+      <div class="cw-status"><span class="cw-dot"></span> Online</div>
     </div>
+    <button class="cw-startover" onclick="startOver()">⟳ Start Over</button>
     <button class="cw-close" onclick="toggleChat()">✕</button>
   </div>
 
-  <div class="cw-chips">
-    <button class="cchip" onclick="ask('What courses does SJU offer?')">Courses</button>
-    <button class="cchip" onclick="ask('How do I apply for admission 2026?')">Apply</button>
-    <button class="cchip" onclick="ask('Tell me about placements at SJU')">Placements</button>
-    <button class="cchip" onclick="ask('Is hostel available?')">Hostel</button>
-    <button class="cchip" onclick="ask('What scholarships are available?')">Scholarships</button>
-    <button class="cchip" onclick="ask('What are the fees for BCA?')">Fees</button>
-    <button class="cchip" onclick="ask('Tell me about sports at SJU')">Sports</button>
-  </div>
-
-  <div class="cw-msgs" id="cwMsgs">
-    <div class="cmsg bot">
-      <div class="cav">SJ</div>
-      <div class="cbub">👋 Hi! I'm the SJU Assistant.<br><br>Ask me anything about <strong>courses, admissions, fees, placements, hostel, scholarships, sports</strong> or campus life at St Joseph's University!</div>
-    </div>
-  </div>
+  <div class="cw-msgs" id="cwMsgs"></div>
 
   <div class="cw-inp">
-    <input id="cwInput" type="text" placeholder="Ask anything about SJU..." autocomplete="off"/>
-    <button class="csend" id="cwBtn" onclick="cwSend()">
+    <div class="search-wrap">
+      <div class="search-drop" id="searchDrop"></div>
+      <input id="cwInput" type="text" placeholder="Ask anything about SJU..." autocomplete="off" style="width:100%"/>
+    </div>
+    <button class="csend" id="cwBtn" onclick="handleSend()">
       <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
     </button>
   </div>
 </div>
 
 <script>
-// ── Chatbot with conversation memory ──────────────────────────────────────
-let isOpen = false;
+// ═══════════════ SJU ADMISSION ASSISTANT ═══════════════
+// State
+const state = { level: null, course: null, history: [], openedLinks: [] };
+let isOpen = false, sdIndex = -1;
 
-// Store full conversation history here
-const chatHistory = [];
+// ── Official URLs (DATA: edit per-course URLs here) ──────────────
+const ADMISSIONS = "https://www.sju.edu.in/admissions";
+const APPLY      = "https://admissions.sju.edu.in/";
+const DEPT       = "https://www.sju.edu.in/departments/st-joseph-university/";
 
-// Reliable Enter-key handler — attach once the page loads
-document.addEventListener('DOMContentLoaded', function(){
-  const input = document.getElementById('cwInput');
-  if(input){
-    input.addEventListener('keydown', function(e){
-      if(e.key === 'Enter' && !e.shiftKey){
-        e.preventDefault();
-        cwSend();
-      }
-    });
+function C(name, deptUrl, overrides){
+  return Object.assign({
+    name: name,
+    info:      deptUrl || ADMISSIONS,
+    fees:      ADMISSIONS,
+    eligibility: ADMISSIONS,
+    dates:     ADMISSIONS,
+    apply:     APPLY,
+    selection: ADMISSIONS
+  }, overrides || {});
+}
+
+const IT_AC  = DEPT + "school--of-information-technology/advanced-computing";
+const IT_CS  = DEPT + "school--of-information-technology/computer-science-and-computer-application";
+const D_ECO  = DEPT + "school--of-humanities-and-social-sciences/economics";
+const D_PSY  = DEPT + "school--of-humanities-and-social-sciences/psychology";
+const D_BIO  = DEPT + "school--of-life-sciences/biotechnology";
+const D_MIC  = DEPT + "school--of-life-sciences/microbiology";
+const D_PHY  = DEPT + "school--of-physical-sciences/physics";
+const D_MAT  = DEPT + "school--of-physical-sciences/mathematics";
+const D_STA  = DEPT + "school--of-physical-sciences/statistics";
+const D_CHE  = DEPT + "school--of-chemical-sciences/chemistry";
+const D_SW   = DEPT + "school--of-social-work/social-work";
+const D_COM  = DEPT + "school--of-business-administration/commerce-and-management";
+
+const PROGRAMMES = {
+  UG: [
+    C("BCA (Bachelor of Computer Applications)", IT_CS),
+    C("BCA (Data Analytics)", IT_AC),
+    C("BSc Computer Science", IT_CS),
+    C("BBA (Bachelor of Business Administration)", D_COM),
+    C("BCom (Bachelor of Commerce)", D_COM),
+    C("BSc Physics", D_PHY),
+    C("BSc Mathematics", D_MAT),
+    C("BSc Statistics", D_STA),
+    C("BSc Electronics", D_PHY),
+    C("BSc Biotechnology", D_BIO),
+    C("BSc Microbiology", D_MIC),
+    C("BSc Food Science & Technology", D_BIO),
+    C("BSc Chemistry", D_CHE),
+    C("BA Psychology", D_PSY),
+    C("BA Economics", D_ECO),
+    C("BA History", null),
+    C("BA Sociology", null),
+    C("BA English Literature", null),
+    C("BA Visual Communication", null),
+    C("BA Journalism", null),
+    C("BSW (Bachelor of Social Work)", D_SW),
+  ],
+  PG: [
+    C("MSc Big Data Analytics", IT_AC),
+    C("MCA (Master of Computer Applications)", IT_CS),
+    C("MSc Computer Science", IT_CS),
+    C("MBA (Master of Business Administration)", D_COM),
+    C("MCom (Master of Commerce)", D_COM),
+    C("MSc Physics", D_PHY),
+    C("MSc Mathematics", D_MAT),
+    C("MSc Statistics", D_STA),
+    C("MSc Biotechnology", D_BIO),
+    C("MSc Microbiology", D_MIC),
+    C("MSc Food Science & Technology", D_BIO),
+    C("MSc Organic Chemistry", D_CHE),
+    C("MSc Analytical Chemistry", D_CHE),
+    C("MA Psychology", D_PSY),
+    C("MA Economics", D_ECO),
+    C("MA English", null),
+    C("MA Media Studies", null),
+    C("MSW (Master of Social Work)", D_SW),
+  ],
+  PGD: [
+    C("PG Diploma in Data Science", IT_AC),
+    C("PG Diploma in Cyber Security", IT_AC),
+    C("PG Diploma in HR Management", D_COM),
+    C("PG Diploma in Financial Management", D_COM),
+  ],
+  PHD: [
+    C("PhD in Computer Science", IT_CS),
+    C("PhD in Advanced Computing / Data Science", IT_AC),
+    C("PhD in Physics", D_PHY),
+    C("PhD in Mathematics", D_MAT),
+    C("PhD in Statistics", D_STA),
+    C("PhD in Chemistry", D_CHE),
+    C("PhD in Biotechnology", D_BIO),
+    C("PhD in Microbiology", D_MIC),
+    C("PhD in Economics", D_ECO),
+    C("PhD in Psychology", D_PSY),
+    C("PhD in Commerce & Management", D_COM),
+    C("PhD in Social Work", D_SW),
+    C("PhD in English", null),
+  ]
+};
+
+const OPTION_CARDS = [
+  { icon:"📘", label:"Programme Info",    key:"info" },
+  { icon:"💰", label:"Fees",              key:"fees" },
+  { icon:"✅", label:"Eligibility",       key:"eligibility" },
+  { icon:"📅", label:"Important Dates",   key:"dates" },
+  { icon:"📝", label:"How to Apply",      key:"apply" },
+  { icon:"🎯", label:"Selection Process", key:"selection" },
+];
+
+// ── UI helpers ───────────────────────────────────────────────────
+const $msgs = () => document.getElementById('cwMsgs');
+const $inp  = () => document.getElementById('cwInput');
+const $drop = () => document.getElementById('searchDrop');
+
+function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function botMsg(html){
+  const d=document.createElement('div'); d.className='cmsg bot';
+  d.innerHTML=`<div class="cav">SJ</div><div class="cbub">${html}</div>`;
+  $msgs().appendChild(d); scrollDown();
+}
+function usrMsg(text){
+  const d=document.createElement('div'); d.className='cmsg usr';
+  d.innerHTML=`<div class="cbub">${esc(text)}</div>`;
+  $msgs().appendChild(d); scrollDown();
+}
+function rawBlock(html){
+  const d=document.createElement('div'); d.innerHTML=html;
+  $msgs().appendChild(d.firstElementChild || d); scrollDown();
+}
+function scrollDown(){ const b=$msgs(); b.scrollTop=b.scrollHeight; }
+function showTyping(){
+  const d=document.createElement('div'); d.className='cmsg bot'; d.id='cwTyping';
+  d.innerHTML=`<div class="cav">SJ</div><div class="cbub"><span class="tdot" style="animation-delay:0s"></span><span class="tdot" style="animation-delay:.2s"></span><span class="tdot" style="animation-delay:.4s"></span></div>`;
+  $msgs().appendChild(d); scrollDown();
+}
+function hideTyping(){ document.getElementById('cwTyping')?.remove(); }
+
+// ── Welcome / Start Over ─────────────────────────────────────────
+function startOver(){
+  state.level=null; state.course=null; state.history=[]; state.openedLinks=[];
+  $msgs().innerHTML=''; hideDrop();
+  $inp().value=''; $inp().placeholder='Ask anything about SJU...';
+  renderWelcome();
+}
+function renderWelcome(){
+  botMsg(`Hi 👋 Welcome to the <strong>SJU Admission Assistant</strong>!<br><br>Choose a programme level, or open any official page below:`);
+  rawBlock(`<div class="lvl-btns" style="flex-wrap:wrap">
+    <button class="lvl-btn" style="flex-basis:47%" onclick="pickLevel('UG')">🎓 Undergraduate<small>BCA · BSc · BBA · BCom · BA</small></button>
+    <button class="lvl-btn" style="flex-basis:47%" onclick="pickLevel('PG')">📚 Postgraduate<small>MSc · MCA · MBA · MA · MSW</small></button>
+    <button class="lvl-btn" style="flex-basis:47%" onclick="pickLevel('PGD')">📜 PG Diploma<small>Data Science · Cyber Security</small></button>
+    <button class="lvl-btn" style="flex-basis:47%" onclick="pickLevel('PHD')">🔬 PhD Programmes<small>Research degrees</small></button>
+  </div>`);
+  renderGlobalActions();
+}
+const LEVEL_NAMES = { UG:"Undergraduate", PG:"Postgraduate", PGD:"PG Diploma", PHD:"PhD" };
+function pickLevel(level){
+  state.level=level; state.course=null;
+  const lname=LEVEL_NAMES[level]||level;
+  usrMsg(lname);
+  botMsg(`Great! Please <strong>search or select</strong> the ${lname} programme you're interested in. 🔍<br><span style="font-size:11px;opacity:.7">Start typing below — e.g. "data", "computer", "psych"...</span>`);
+  $inp().placeholder=`Search ${lname} programmes...`;
+  $inp().focus();
+  showDrop(PROGRAMMES[level]);
+}
+
+// ── Course search dropdown ───────────────────────────────────────
+function showDrop(list){
+  const dd=$drop(); sdIndex=-1;
+  if(!list.length){ dd.innerHTML=`<div class="sd-empty">No matching programme — press Enter to ask the AI instead</div>`; }
+  else dd.innerHTML=list.map((c,i)=>`<div class="sd-item" data-name="${esc(c.name)}" onclick="chooseCourseByName(this.dataset.name)">${esc(c.name)}</div>`).join('');
+  dd.classList.add('show');
+}
+function hideDrop(){ $drop().classList.remove('show'); sdIndex=-1; }
+function filterCourses(q){
+  const list=PROGRAMMES[state.level]||[];
+  if(!q) return list;
+  q=q.toLowerCase();
+  return list.filter(c=>c.name.toLowerCase().includes(q));
+}
+function chooseCourseByName(name){
+  const c=(PROGRAMMES[state.level]||[]).find(x=>x.name===name);
+  if(c) selectCourse(c);
+}
+function selectCourse(c){
+  state.course=c; hideDrop();
+  $inp().value=''; $inp().placeholder='Ask anything about this programme...';
+  usrMsg(c.name);
+  // give the AI context for later conversational questions
+  state.history.push({role:'user',content:`I'm interested in the ${c.name} programme at SJU.`});
+  state.history.push({role:'assistant',content:`Great choice! I can help you with ${c.name}. What would you like to know?`});
+  botMsg(`<strong>${esc(c.name)}</strong> — great choice! 🎉<br>What would you like to know? Click an option below, or type any question.`);
+  renderOptionCards();
+}
+function renderOptionCards(){
+  const cards=OPTION_CARDS.map(o=>
+    `<button class="opt-card" onclick="openOfficial('${o.key}','${o.icon}','${o.label}')"><span class="oc-ic">${o.icon}</span>${o.label}</button>`
+  ).join('');
+  rawBlock(`<div class="opt-cards">${cards}</div>`);
+}
+
+// ── Official redirection (highest priority feature) ─────────────
+function openOfficial(key, icon, label){
+  const c=state.course; if(!c) return;
+  const url=c[key];
+  usrMsg(label);
+  state.openedLinks.push(url);
+  botMsg(`<a class="link-card" href="${url}" target="_blank" rel="noopener">${icon} ${esc(label)} — official page ↗</a>`);
+  window.open(url,'_blank');
+}
+
+// ── Global quick actions (official pages, no AI) ─────────────────
+const GLOBAL_ACTIONS = [
+  { icon:"🎓", label:"Admissions Open 2026", url:"https://www.sju.edu.in/admissions/admissions" },
+  { icon:"📋", label:"Application Status",   url:"https://sjuv4.linways.com/v4/adm-applicant/login" },
+  { icon:"🏠", label:"Hostel",               url:"https://www.sju.edu.in/services/hostel/university-hostel" },
+  { icon:"💰", label:"Scholarships",         url:"https://www.sju.edu.in/student-support/scholarships_page" },
+  { icon:"💼", label:"Placements",           url:"https://www.sju.edu.in/placements/about-placements" },
+  { icon:"📖", label:"Certificate Courses",  url:"https://www.sju.edu.in/services/certificate-courses" },
+  { icon:"📞", label:"Contact University",   url:"https://www.sju.edu.in/about/contact-us" },
+];
+function renderGlobalActions(){
+  const cards=GLOBAL_ACTIONS.map((g,i)=>
+    `<button class="opt-card" onclick="openGlobal(${i})"><span class="oc-ic">${g.icon}</span>${g.label}</button>`
+  ).join('');
+  rawBlock(`<div class="opt-cards">${cards}</div>`);
+}
+function openGlobal(i){
+  const g=GLOBAL_ACTIONS[i]; if(!g) return;
+  usrMsg(g.label);
+  state.openedLinks.push(g.url);
+  botMsg(`<a class="link-card" href="${g.url}" target="_blank" rel="noopener">${g.icon} ${esc(g.label)} — official page ↗</a>`);
+  window.open(g.url,'_blank');
+}
+
+// ── Send handling: search mode vs AI mode ────────────────────────
+function handleSend(){
+  const q=$inp().value.trim();
+  if(!q) return;
+  // In course-search mode: Enter selects highlighted or single match
+  if(state.level && !state.course){
+    const matches=filterCourses(q);
+    const items=$drop().querySelectorAll('.sd-item');
+    if(sdIndex>=0 && items[sdIndex]){ chooseCourseByName(items[sdIndex].dataset.name); return; }
+    if(matches.length===1){ selectCourse(matches[0]); return; }
+    if(matches.length>1){ showDrop(matches); return; }
+    // no match → fall through to AI
   }
+  sendToAI(q);
+}
+
+async function sendToAI(q){
+  const btn=document.getElementById('cwBtn');
+  $inp().value=''; hideDrop(); btn.disabled=true;
+  usrMsg(q); showTyping();
+  try{
+    const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({question:q,history:state.history})});
+    const data=await r.json(); hideTyping();
+    const ans=(data.answer||'Sorry, something went wrong.');
+    botMsg(esc(ans).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>'));
+    state.history.push({role:'user',content:q});
+    state.history.push({role:'assistant',content:ans});
+    if(state.history.length>20) state.history.splice(0,2);
+    if(state.course) renderOptionCards();   // keep options handy after each answer
+  }catch(e){ hideTyping(); botMsg('Sorry, something went wrong. Please try again.'); }
+  finally{ btn.disabled=false; $inp().focus(); }
+}
+
+// ── Input events: live search, keyboard nav, Enter to send ───────
+document.addEventListener('DOMContentLoaded',function(){
+  renderWelcome();
+  const inp=$inp();
+  inp.addEventListener('input',function(){
+    if(state.level && !state.course) showDrop(filterCourses(inp.value.trim()));
+  });
+  inp.addEventListener('keydown',function(e){
+    const items=$drop().querySelectorAll('.sd-item');
+    const dropOpen=$drop().classList.contains('show') && items.length;
+    if(dropOpen && e.key==='ArrowDown'){ e.preventDefault(); sdIndex=Math.min(sdIndex+1,items.length-1); highlight(items); return; }
+    if(dropOpen && e.key==='ArrowUp'){ e.preventDefault(); sdIndex=Math.max(sdIndex-1,0); highlight(items); return; }
+    if(e.key==='Escape'){ hideDrop(); return; }
+    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }
+  });
+  document.addEventListener('click',function(e){
+    if(!e.target.closest('.search-wrap')) hideDrop();
+  });
 });
+function highlight(items){
+  items.forEach((el,i)=>el.classList.toggle('active',i===sdIndex));
+  if(items[sdIndex]) items[sdIndex].scrollIntoView({block:'nearest'});
+}
 
 function toggleChat(){
-  isOpen = !isOpen;
-  document.getElementById('chat-win').classList.toggle('open', isOpen);
-  if(isOpen){
-    document.getElementById('fab-pulse').style.display='none';
-    document.getElementById('cwInput').focus();
-  }
-}
-
-function ask(q){
-  if(!isOpen) toggleChat();
-  document.getElementById('cwInput').value = q;
-  cwSend();
-}
-
-function addMsg(text, role){
-  const box = document.getElementById('cwMsgs');
-  const d = document.createElement('div');
-  d.className = 'cmsg ' + role;
-  const content = text
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
-    .replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');
-  if(role==='bot'){
-    d.innerHTML=`<div class="cav">SJ</div><div class="cbub">${content}</div>`;
-  } else {
-    d.innerHTML=`<div class="cbub">${content}</div>`;
-  }
-  box.appendChild(d);
-  box.scrollTop = box.scrollHeight;
-}
-
-function showTyping(){
-  const box = document.getElementById('cwMsgs');
-  const d = document.createElement('div');
-  d.className='cmsg bot'; d.id='cwTyping';
-  d.innerHTML=`<div class="cav">SJ</div><div class="cbub"><span class="tdot" style="animation-delay:0s"></span><span class="tdot" style="animation-delay:.2s"></span><span class="tdot" style="animation-delay:.4s"></span></div>`;
-  box.appendChild(d);
-  box.scrollTop = box.scrollHeight;
-}
-
-async function cwSend(){
-  const inp = document.getElementById('cwInput');
-  const btn = document.getElementById('cwBtn');
-  const q = inp.value.trim();
-  if(!q || btn.disabled) return;
-
-  inp.value='';
-  btn.disabled=true;
-  addMsg(q, 'usr');
-  showTyping();
-
-  try {
-    const r = await fetch('/chat', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        question: q,
-        history: chatHistory        // send full conversation history
-      })
-    });
-    const data = await r.json();
-    document.getElementById('cwTyping')?.remove();
-
-    const answer = data.answer || 'Sorry, something went wrong.';
-    addMsg(answer, 'bot');
-
-    // Save this exchange to history
-    chatHistory.push({role: 'user',      content: q});
-    chatHistory.push({role: 'assistant', content: answer});
-
-    // Keep only last 20 messages to avoid getting too large
-    if(chatHistory.length > 20) chatHistory.splice(0, 2);
-
-  } catch(e) {
-    document.getElementById('cwTyping')?.remove();
-    addMsg('Sorry, something went wrong. Please try again.', 'bot');
-  } finally {
-    btn.disabled=false;
-    inp.focus();
-  }
+  isOpen=!isOpen;
+  document.getElementById('chat-win').classList.toggle('open',isOpen);
+  if(isOpen){ document.getElementById('fab-pulse').style.display='none'; $inp().focus(); }
 }
 </script>
 </body>
