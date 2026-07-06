@@ -528,20 +528,30 @@ const state = { level: null, course: null, history: [], openedLinks: [] };
 let isOpen = false, sdIndex = -1;
 
 // ── Official URLs (DATA: edit per-course URLs here) ──────────────
-const ADMISSIONS = "https://www.sju.edu.in/admissions";
+// ── Official URL routing ─────────────────────────────────────────
+// Per-programme pages exist at sju.edu.in/programmes/<slug> (verified: BCA).
+// Fallback chain: programme page -> department page -> all-programmes index.
+const PROG       = "https://www.sju.edu.in/programmes/";
+const ALL_PROG   = "https://www.sju.edu.in/admissions/all-programmes";
+const ADMISSIONS = "https://www.sju.edu.in/admissions/admissions";
 const APPLY      = "https://admissions.sju.edu.in/";
 const DEPT       = "https://www.sju.edu.in/departments/st-joseph-university/";
 
-function C(name, deptUrl, overrides){
+// C(name, programmeSlugOrFullUrl, deptUrl, overrides)
+// info/fees/eligibility/selection -> the programme's own official page
+// dates -> admissions (centralised) | apply -> application portal
+function C(name, prog, dept, ov){
+  const page = prog ? (prog.indexOf('http')===0 ? prog : PROG + prog)
+                    : (dept || ALL_PROG);
   return Object.assign({
     name: name,
-    info:      deptUrl || ADMISSIONS,
-    fees:      ADMISSIONS,
-    eligibility: ADMISSIONS,
-    dates:     ADMISSIONS,
-    apply:     APPLY,
-    selection: ADMISSIONS
-  }, overrides || {});
+    info: page,
+    fees: page,
+    eligibility: page,
+    selection: page,
+    dates: ADMISSIONS,
+    apply: APPLY
+  }, ov || {});
 }
 
 const IT_AC  = DEPT + "school--of-information-technology/advanced-computing";
@@ -557,70 +567,72 @@ const D_CHE  = DEPT + "school--of-chemical-sciences/chemistry";
 const D_SW   = DEPT + "school--of-social-work/social-work";
 const D_COM  = DEPT + "school--of-business-administration/commerce-and-management";
 
+// Slugs follow SJU's verified convention (full degree name, kebab-case).
+// BCA + BCA(DA) verified; others derived - fix any slug here if a page 404s.
 const PROGRAMMES = {
   UG: [
-    C("BCA (Bachelor of Computer Applications)", IT_CS),
-    C("BCA (Data Analytics)", IT_AC),
-    C("BSc Computer Science", IT_CS),
-    C("BBA (Bachelor of Business Administration)", D_COM),
-    C("BCom (Bachelor of Commerce)", D_COM),
-    C("BSc Physics", D_PHY),
-    C("BSc Mathematics", D_MAT),
-    C("BSc Statistics", D_STA),
-    C("BSc Electronics", D_PHY),
-    C("BSc Biotechnology", D_BIO),
-    C("BSc Microbiology", D_MIC),
-    C("BSc Food Science & Technology", D_BIO),
-    C("BSc Chemistry", D_CHE),
-    C("BA Psychology", D_PSY),
-    C("BA Economics", D_ECO),
-    C("BA History", null),
-    C("BA Sociology", null),
-    C("BA English Literature", null),
-    C("BA Visual Communication", null),
-    C("BA Journalism", null),
-    C("BSW (Bachelor of Social Work)", D_SW),
+    C("BCA (Bachelor of Computer Applications)", "bachelor-of-computer-applications", IT_CS),
+    C("BCA (Data Analytics)", "https://www.sju.edu.in/courses/st-joseph-university/school--of-information-technology/advanced-computing/bca-data-analytics", IT_AC),
+    C("BSc Computer Science", null, IT_CS),
+    C("BBA (Bachelor of Business Administration)", "bachelor-of-business-administration", D_COM),
+    C("BCom (Bachelor of Commerce)", "bachelor-of-commerce", D_COM),
+    C("BSc Physics", null, D_PHY),
+    C("BSc Mathematics", null, D_MAT),
+    C("BSc Statistics", null, D_STA),
+    C("BSc Electronics", null, D_PHY),
+    C("BSc Biotechnology", null, D_BIO),
+    C("BSc Microbiology", null, D_MIC),
+    C("BSc Food Science & Technology", null, D_BIO),
+    C("BSc Chemistry", null, D_CHE),
+    C("BA Psychology", null, D_PSY),
+    C("BA Economics", null, D_ECO),
+    C("BA History", null, null),
+    C("BA Sociology", null, null),
+    C("BA English Literature", null, null),
+    C("BA Visual Communication", null, null),
+    C("BA Journalism", null, null),
+    C("BSW (Bachelor of Social Work)", "bachelor-of-social-work", D_SW),
   ],
   PG: [
-    C("MSc Big Data Analytics", IT_AC),
-    C("MCA (Master of Computer Applications)", IT_CS),
-    C("MSc Computer Science", IT_CS),
-    C("MBA (Master of Business Administration)", D_COM),
-    C("MCom (Master of Commerce)", D_COM),
-    C("MSc Physics", D_PHY),
-    C("MSc Mathematics", D_MAT),
-    C("MSc Statistics", D_STA),
-    C("MSc Biotechnology", D_BIO),
-    C("MSc Microbiology", D_MIC),
-    C("MSc Food Science & Technology", D_BIO),
-    C("MSc Organic Chemistry", D_CHE),
-    C("MSc Analytical Chemistry", D_CHE),
-    C("MA Psychology", D_PSY),
-    C("MA Economics", D_ECO),
-    C("MA English", null),
-    C("MA Media Studies", null),
-    C("MSW (Master of Social Work)", D_SW),
+    C("MSc Big Data Analytics", "master-of-science-big-data-analytics", IT_AC),
+    C("MCA (Master of Computer Applications)", "master-of-computer-applications", IT_CS),
+    C("MSc Computer Science", "master-of-science-computer-science", IT_CS),
+    C("MBA (Master of Business Administration)", "master-of-business-administration", D_COM),
+    C("MCom (Master of Commerce)", "master-of-commerce", D_COM),
+    C("MSc Physics", "master-of-science-physics", D_PHY),
+    C("MSc Mathematics", "master-of-science-mathematics", D_MAT),
+    C("MSc Statistics", "master-of-science-statistics", D_STA),
+    C("MSc Biotechnology", "master-of-science-biotechnology", D_BIO),
+    C("MSc Microbiology", "master-of-science-microbiology", D_MIC),
+    C("MSc Food Science & Technology", "master-of-science-food-science-and-technology", D_BIO),
+    C("MSc Organic Chemistry", "master-of-science-organic-chemistry", D_CHE),
+    C("MSc Analytical Chemistry", "master-of-science-analytical-chemistry", D_CHE),
+    C("MA Psychology", "master-of-arts-psychology", D_PSY),
+    C("MA Economics", "master-of-arts-economics", D_ECO),
+    C("MA English", "master-of-arts-english", null),
+    C("MA Media Studies", "master-of-arts-media-studies", null),
+    C("MSW (Master of Social Work)", "master-of-social-work", D_SW),
   ],
   PGD: [
-    C("PG Diploma in Data Science", IT_AC),
-    C("PG Diploma in Cyber Security", IT_AC),
-    C("PG Diploma in HR Management", D_COM),
-    C("PG Diploma in Financial Management", D_COM),
+    C("PG Diploma in Data Science", "pg-diploma-in-data-science", IT_AC),
+    C("PG Diploma in Cyber Security", "pg-diploma-in-cyber-security", IT_AC),
+    C("PG Diploma in HR Management", "pg-diploma-in-hr-management", D_COM),
+    C("PG Diploma in Financial Management", "pg-diploma-in-financial-management", D_COM),
   ],
   PHD: [
-    C("PhD in Computer Science", IT_CS),
-    C("PhD in Advanced Computing / Data Science", IT_AC),
-    C("PhD in Physics", D_PHY),
-    C("PhD in Mathematics", D_MAT),
-    C("PhD in Statistics", D_STA),
-    C("PhD in Chemistry", D_CHE),
-    C("PhD in Biotechnology", D_BIO),
-    C("PhD in Microbiology", D_MIC),
-    C("PhD in Economics", D_ECO),
-    C("PhD in Psychology", D_PSY),
-    C("PhD in Commerce & Management", D_COM),
-    C("PhD in Social Work", D_SW),
-    C("PhD in English", null),
+    C("PhD in Computer Science", null, IT_CS),
+    C("PhD in Advanced Computing / Data Science", null, IT_AC),
+    C("PhD in Physics", null, D_PHY),
+    C("PhD in Mathematics", null, D_MAT),
+    C("PhD in Statistics", null, D_STA),
+    C("PhD in Chemistry", null, D_CHE),
+    C("PhD in Biotechnology", null, D_BIO),
+    C("PhD in Microbiology", null, D_MIC),
+    C("PhD in Economics", null, D_ECO),
+    C("PhD in Psychology", null, D_PSY),
+    C("PhD in Commerce & Management", null, D_COM),
+    C("PhD in Social Work", null, D_SW),
+    C("PhD in English", null, null),
   ]
 };
 
