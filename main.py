@@ -22,7 +22,7 @@ app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "https://mvszfevopamhkratxeak.supabase.co")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 GEMINI_KEY   = os.getenv("GEMINI_API_KEY", "")
 
