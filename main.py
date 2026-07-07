@@ -23,7 +23,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://mvszfevopamhkratxeak.supabase.co")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12c3pmZXZvcGFtaGtyYXR4ZWFrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MjU1MDA2MiwiZXhwIjoyMDk4MTI2MDYyfQ.QJbCXfRHjwlIl2HpkAavoPPbGGeDLsjWyc3mzvY9D8Y")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 GEMINI_KEY   = os.getenv("GEMINI_API_KEY", "")
 
 sb = None
