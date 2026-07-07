@@ -528,111 +528,104 @@ const state = { level: null, course: null, history: [], openedLinks: [] };
 let isOpen = false, sdIndex = -1;
 
 // ── Official URLs (DATA: edit per-course URLs here) ──────────────
-// ── Official URL routing ─────────────────────────────────────────
-// Per-programme pages exist at sju.edu.in/programmes/<slug> (verified: BCA).
-// Fallback chain: programme page -> department page -> all-programmes index.
-const PROG       = "https://www.sju.edu.in/programmes/";
-const ALL_PROG   = "https://www.sju.edu.in/admissions/all-programmes";
-const ADMISSIONS = "https://www.sju.edu.in/admissions/admissions";
-const APPLY      = "https://admissions.sju.edu.in/";
-const DEPT       = "https://www.sju.edu.in/departments/st-joseph-university/";
+// ── Official URL routing (URLs verified from sju.edu.in/admissions/all-programmes) ──
+const SJU        = "https://www.sju.edu.in/";
+const DATES_PAGE = SJU + "important-dates.php";
+const APPLY      = "https://sjuv4.linways.com/v4/adm-applicant/login";
+const PHD_PAGE   = SJU + "admissions/phd-programmes";
+const ALL_PROG   = SJU + "admissions/all-programmes";
 
-// C(name, programmeSlugOrFullUrl, deptUrl, overrides)
-// info/fees/eligibility/selection -> the programme's own official page
-// dates -> admissions (centralised) | apply -> application portal
-function C(name, prog, dept, ov){
-  const page = prog ? (prog.indexOf('http')===0 ? prog : PROG + prog)
-                    : (dept || ALL_PROG);
-  return Object.assign({
+// Each programme's official page has section anchors:
+// #eligibility  #fee-structure  #admission (selection)  — verified on BCA page
+function C(name, path){
+  const page = path ? (path.indexOf('http')===0 ? path : SJU + path) : ALL_PROG;
+  return {
     name: name,
-    info: page,
-    fees: page,
-    eligibility: page,
-    selection: page,
-    dates: ADMISSIONS,
-    apply: APPLY
-  }, ov || {});
+    info:        page,
+    fees:        page + "#fee-structure",
+    eligibility: page + "#eligibility",
+    selection:   page + "#admission",
+    dates:       DATES_PAGE,
+    apply:       APPLY
+  };
 }
 
-const IT_AC  = DEPT + "school--of-information-technology/advanced-computing";
-const IT_CS  = DEPT + "school--of-information-technology/computer-science-and-computer-application";
-const D_ECO  = DEPT + "school--of-humanities-and-social-sciences/economics";
-const D_PSY  = DEPT + "school--of-humanities-and-social-sciences/psychology";
-const D_BIO  = DEPT + "school--of-life-sciences/biotechnology";
-const D_MIC  = DEPT + "school--of-life-sciences/microbiology";
-const D_PHY  = DEPT + "school--of-physical-sciences/physics";
-const D_MAT  = DEPT + "school--of-physical-sciences/mathematics";
-const D_STA  = DEPT + "school--of-physical-sciences/statistics";
-const D_CHE  = DEPT + "school--of-chemical-sciences/chemistry";
-const D_SW   = DEPT + "school--of-social-work/social-work";
-const D_COM  = DEPT + "school--of-business-administration/commerce-and-management";
-
-// Slugs follow SJU's verified convention (full degree name, kebab-case).
-// BCA + BCA(DA) verified; others derived - fix any slug here if a page 404s.
 const PROGRAMMES = {
   UG: [
-    C("BCA (Bachelor of Computer Applications)", "bachelor-of-computer-applications", IT_CS),
-    C("BCA (Data Analytics)", "https://www.sju.edu.in/courses/st-joseph-university/school--of-information-technology/advanced-computing/bca-data-analytics", IT_AC),
-    C("BSc Computer Science", null, IT_CS),
-    C("BBA (Bachelor of Business Administration)", "bachelor-of-business-administration", D_COM),
-    C("BCom (Bachelor of Commerce)", "bachelor-of-commerce", D_COM),
-    C("BSc Physics", null, D_PHY),
-    C("BSc Mathematics", null, D_MAT),
-    C("BSc Statistics", null, D_STA),
-    C("BSc Electronics", null, D_PHY),
-    C("BSc Biotechnology", null, D_BIO),
-    C("BSc Microbiology", null, D_MIC),
-    C("BSc Food Science & Technology", null, D_BIO),
-    C("BSc Chemistry", null, D_CHE),
-    C("BA Psychology", null, D_PSY),
-    C("BA Economics", null, D_ECO),
-    C("BA History", null, null),
-    C("BA Sociology", null, null),
-    C("BA English Literature", null, null),
-    C("BA Visual Communication", null, null),
-    C("BA Journalism", null, null),
-    C("BSW (Bachelor of Social Work)", "bachelor-of-social-work", D_SW),
+    C("B.Com. (Bachelor of Commerce)", "school-of-business/department-of-commerce/bachelor-of-commerce.php"),
+    C("B.Com. Industry Integrated", "school-of-business/department-of-commerce/bachelor-of-commerce-industry-integrated.php"),
+    C("B.Com. International Finance and Accounting", "school-of-business/department-of-commerce/bachelor-of-commerce-international-finance-and-accounting.php"),
+    C("BBA (Bachelor of Business Administration)", "school-of-business/department-of-management/bachelor-of-business-administration.php"),
+    C("BBA Strategic Finance", "school-of-business/department-of-management/bba-in-strategic-finance.php"),
+    C("BBA Branding and Entrepreneurship", "school-of-business/department-of-management/bba-in-branding-and-entrepreneurship.php"),
+    C("BCA (Bachelor of Computer Applications)", "school-of-information-technology/department-of-computer-science/bachelor-of-computer-applications.php"),
+    C("BCA (Data Analytics)", "school-of-information-technology/department-of-advanced-computing/bca-in-data-analytics.php"),
+    C("B.A. Optional English, Journalism & Psychology", "school-of-humanities-and-social-sciences/department-of-psychology-and-counselling/ba-in-optional-english-journalism-and-psychology.php"),
+    C("B.A. Theatre and Performance Studies, Optional English & Psychology", "school-of-humanities-and-social-sciences/department-of-psychology-and-counselling/ba-in-theatre-and-performance-studies-optional-english-and-psychology.php"),
+    C("B.A. Industrial Relations, Economics & Sociology", "school-of-humanities-and-social-sciences/department-of-economics/ba-industrial-relations-economics-sociology.php"),
+    C("B.A. History, Economics & Political Science", "school-of-humanities-and-social-sciences/department-of-political-science/ba-in-history-economics-and-political_science.php"),
+    C("B.A. Communicative English, Political Science & Economics", "school-of-humanities-and-social-sciences/department-of-political-science/ba-communicative-english-political-science-economics.php"),
+    C("B.A. Economics, Political Science & Sociology", "school-of-humanities-and-social-sciences/department-of-economics/ba-in-economics-political-science-and-sociology.php"),
+    C("B.A. History, Political Science & Sociology", "school-of-humanities-and-social-sciences/department-of-history/ba-in-history-political-science-and-sociology.php"),
+    C("B.A. International Relations and Peace Studies, Journalism & Public Policy", "school-of-humanities-and-social-sciences/department-of-international-relations-peace-and-public-policy/ba-international-relations-and-peace-studies-journalism-and-public-policy.php"),
+    C("B.A. Journalism, Political Science & Sociology", "school-of-humanities-and-social-sciences/department-of-political-science/ba-in-journalism-political-science-and-sociology.php"),
+    C("B.A. Journalism, Economics & Psychology", "school-of-humanities-and-social-sciences/department-of-psychology-and-counselling/ba-in-journalism-economics-and-psychology.php"),
+    C("B.A. Visual Communication", "school-of-communication-media-studies/department-of-communication-media-studies/ba-in-visual-communication.php"),
+    C("B.Voc. Digital Media and Animation", "school-of-communication-media-studies/department-of-communication-media-studies/bvoc-in-digital-media-animation.php"),
+    C("B.Voc. Visual Media and Film-Making", "school-of-communication-media-studies/department-of-communication-media-studies/bvoc-in-visual-media-film-making.php"),
+    C("BSW (Bachelor of Social Work)", "school-of-social-work/department-of-social-work/bachelor-of-social-work.php"),
+    C("B.Sc. Biochemistry, Biology & Biotechnology", "school-of-chemical-sciences/department-of-biochemistry/bsc-in-biochemistry-biology-and-biotechnology.php"),
+    C("B.Sc. Biochemistry, Biotechnology & Zoology", "school-of-chemical-sciences/department-of-biochemistry/bsc-in-biochemistry-biotechnology-and-zoology.php"),
+    C("B.Sc. Biochemistry, Microbiology & Zoology", "school-of-chemical-sciences/department-of-biochemistry/bsc-in-biochemistry-microbiology-and-zoology.php"),
+    C("B.Sc. Biochemistry, Biology & Microbiology", "school-of-chemical-sciences/department-of-biochemistry/bsc-in-biochemistry-biology-and-microbiology.php"),
+    C("B.Sc. Biochemistry, Botany & Biotechnology", "school-of-chemical-sciences/department-of-biochemistry/bsc-in-biochemistry-botany-and-biotechnology.php"),
+    C("B.Sc. Chemistry, Environmental Science & Biology", "school-of-chemical-sciences/department-of-chemistry/bsc-in-chemistry-environmental_science-and-biology.php"),
+    C("B.Sc. Botany, Environmental Science & Zoology", "school-of-life-sciences/department-of-botany/bsc-in-botany-environmental-science-and-zoology.php"),
+    C("B.Sc. Chemistry, Microbiology & Biology", "school-of-chemical-sciences/department-of-chemistry/bsc-in-chemistry-microbiology-and-biology.php"),
+    C("B.Sc. Chemistry, Zoology & Biotechnology", "school-of-chemical-sciences/department-of-chemistry/bsc-in-chemistry-zoology-and-biotechnology.php"),
+    C("B.Sc. Chemistry, Biotechnology & Biology", "school-of-chemical-sciences/department-of-chemistry/bsc-in-chemistry-biotechnology-and-biology.php"),
+    C("B.Sc. Chemistry, Microbiology & Biotechnology", "school-of-chemical-sciences/department-of-chemistry/bsc-in-chemistry-microbiology-and-biotechnology.php"),
+    C("B.Sc. Chemistry, Botany & Zoology", "school-of-chemical-sciences/department-of-chemistry/bsc-in-chemistry-botany-and-zoology.php"),
+    C("B.Sc. Computer Science, Mathematics & Statistics", "school-of-physical-sciences/department-of-statistics/bsc-in-computer-science-mathematics-statistics.php"),
+    C("B.Sc. Physics, Mathematics & Computer Science", "school-of-physical-sciences/department-of-physics/bsc-in-physics-mathematics-computer-science.php"),
+    C("B.Sc. Economics, Mathematics & Statistics", "school-of-humanities-and-social-sciences/department-of-economics/bsc-in-economics-mathematics-and-statistics.php"),
+    C("B.Sc. Physics, Electronics & Mathematics", "school-of-physical-sciences/department-of-physics/bsc-in-physics-electronics-mathematics.php"),
+    C("B.Sc. Physics, Chemistry & Mathematics", "school-of-physical-sciences/department-of-physics/bsc-in-physics-chemistry-and-mathematics.php"),
   ],
   PG: [
-    C("MSc Big Data Analytics", "master-of-science-big-data-analytics", IT_AC),
-    C("MCA (Master of Computer Applications)", "master-of-computer-applications", IT_CS),
-    C("MSc Computer Science", "master-of-science-computer-science", IT_CS),
-    C("MBA (Master of Business Administration)", "master-of-business-administration", D_COM),
-    C("MCom (Master of Commerce)", "master-of-commerce", D_COM),
-    C("MSc Physics", "master-of-science-physics", D_PHY),
-    C("MSc Mathematics", "master-of-science-mathematics", D_MAT),
-    C("MSc Statistics", "master-of-science-statistics", D_STA),
-    C("MSc Biotechnology", "master-of-science-biotechnology", D_BIO),
-    C("MSc Microbiology", "master-of-science-microbiology", D_MIC),
-    C("MSc Food Science & Technology", "master-of-science-food-science-and-technology", D_BIO),
-    C("MSc Organic Chemistry", "master-of-science-organic-chemistry", D_CHE),
-    C("MSc Analytical Chemistry", "master-of-science-analytical-chemistry", D_CHE),
-    C("MA Psychology", "master-of-arts-psychology", D_PSY),
-    C("MA Economics", "master-of-arts-economics", D_ECO),
-    C("MA English", "master-of-arts-english", null),
-    C("MA Media Studies", "master-of-arts-media-studies", null),
-    C("MSW (Master of Social Work)", "master-of-social-work", D_SW),
+    C("M.Sc. Big Data Analytics", "school-of-information-technology/department-of-advanced-computing/msc-in-big-data-analytics.php"),
+    C("M.Sc. Computer Science", "school-of-information-technology/department-of-computer-science/msc-in-computer-science.php"),
+    C("M.Sc. Cyber Security and Artificial Intelligence", "school-of-information-technology/department-of-computer-science/msc-in-cyber-security-artificial-intelligence.php"),
+    C("MCA (Master of Computer Applications)", "school-of-information-technology/department-of-computer-science/master-of-computer-applications.php"),
+    C("M.Sc. Analytical Chemistry", "school-of-chemical-sciences/department-of-chemistry/msc-in-analytical-chemistry.php"),
+    C("M.Sc. Organic Chemistry", "school-of-chemical-sciences/department-of-chemistry/msc-in-organic-chemistry.php"),
+    C("M.Sc. Biochemistry", "school-of-chemical-sciences/department-of-biochemistry/msc-in-biochemistry.php"),
+    C("M.Sc. Counselling Psychology", "school-of-humanities-and-social-sciences/department-of-psychology-and-counselling/master-of-science-in-counselling-psychology.php"),
+    C("M.Sc. Biotechnology", "school-of-life-sciences/department-of-biotechnology/msc-in-biotechnology.php"),
+    C("M.Sc. Environmental Science and Sustainability", "school-of-life-sciences/department-of-environmental-science/msc-in-environmental-science-and-sustainability.php"),
+    C("M.Sc. Food Science and Technology", "school-of-life-sciences/department-of-food-science-and-technology/msc-in-food-science-and-technology.php"),
+    C("M.Sc. Microbiology", "school-of-life-sciences/department-of-microbiology/msc-in-microbiology.php"),
+    C("M.Sc. Zoology", "school-of-life-sciences/department-of-zoology/msc-in-zoology.php"),
+    C("M.Sc. Mathematics", "school-of-physical-sciences/department-of-mathematics/master-of-science-in-mathematics.php"),
+    C("M.Sc. Physics", "school-of-physical-sciences/department-of-physics/master-of-science-in-physics.php"),
+    C("M.Sc. Statistics", "school-of-physical-sciences/department-of-statistics/master-of-science-in-statistics.php"),
+    C("M.Com (Master of Commerce)", "school-of-business/department-of-commerce/master-of-commerce.php"),
+    C("M.A. Economics", "school-of-humanities-and-social-sciences/department-of-economics/master-of-arts-in-economics.php"),
+    C("M.A. English", "school-of-languages-and-literatures/department-of-english/master-of-arts-in-english.php"),
+    C("M.A. Political Science", "school-of-humanities-and-social-sciences/department-of-political-science/master-of-arts-in-political-science.php"),
+    C("M.A. Advertising and Public Relations", "school-of-communication-media-studies/department-of-communication-media-studies/ma-in-advertising-public-relations.php"),
+    C("M.A. Journalism and Mass Communication", "school-of-communication-media-studies/department-of-communication-media-studies/ma-in-journalism-mass-communication.php"),
+    C("M.S.W (Master of Social Work)", "school-of-social-work/department-of-social-work/master-of-social-work.php"),
   ],
   PGD: [
-    C("PG Diploma in Data Science", "pg-diploma-in-data-science", IT_AC),
-    C("PG Diploma in Cyber Security", "pg-diploma-in-cyber-security", IT_AC),
-    C("PG Diploma in HR Management", "pg-diploma-in-hr-management", D_COM),
-    C("PG Diploma in Financial Management", "pg-diploma-in-financial-management", D_COM),
+    C("Postgraduate Diploma in Financial Management", "school-of-business/department-of-commerce/pg-diploma-in-financial-management.php"),
+    C("Postgraduate Diploma in Human Resource Management", "school-of-business/department-of-management/post-graduation-diploma-in-human-resource-management.php"),
+    C("Executive Diploma in Digital Media Communication", "school-of-communication-media-studies/department-of-communication-media-studies/executive-diploma-digital-media-communications.php"),
+    C("Postgraduate Diploma in Cyber Security", "school-of-information-technology/department-of-advanced-computing/pg-diploma-in-cyber-security.php"),
+    C("Postgraduate Diploma in Data Analytics", "school-of-information-technology/department-of-advanced-computing/pg-diploma-in-data-analytics.php"),
   ],
   PHD: [
-    C("PhD in Computer Science", null, IT_CS),
-    C("PhD in Advanced Computing / Data Science", null, IT_AC),
-    C("PhD in Physics", null, D_PHY),
-    C("PhD in Mathematics", null, D_MAT),
-    C("PhD in Statistics", null, D_STA),
-    C("PhD in Chemistry", null, D_CHE),
-    C("PhD in Biotechnology", null, D_BIO),
-    C("PhD in Microbiology", null, D_MIC),
-    C("PhD in Economics", null, D_ECO),
-    C("PhD in Psychology", null, D_PSY),
-    C("PhD in Commerce & Management", null, D_COM),
-    C("PhD in Social Work", null, D_SW),
-    C("PhD in English", null, null),
+    C("PhD Programmes (all departments)", PHD_PAGE),
   ]
 };
 
