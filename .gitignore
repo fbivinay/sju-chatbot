@@ -4,7 +4,7 @@ _env.txt
 gemini keys.txt
 scraped_chunks.json
 scrape_log.txt
-scrape_playwright.py
+.playwright-mcp/
 crawl_urls.py
 diagnose.py
 crawl_full_site.py
