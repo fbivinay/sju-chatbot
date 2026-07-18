@@ -4,189 +4,211 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>St Joseph's University, Bengaluru</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Arima:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',Arial,sans-serif;font-size:14px;color:#222;background:#fff}
+html{font-size:19px}
+body{font-family:'Arima',sans-serif;font-size:1rem;line-height:1.5;color:#222;background:#fff;width:100%;overflow-x:hidden;zoom:0.8}
+h1,h2,h3,h4,h5,h6,button,input,.logo-text,.nav,.hero-title,.stat-n,.sec-title{font-family:'Poppins',sans-serif}
 a{text-decoration:none;color:inherit}
 img{max-width:100%}
+.wrap{width:100%}
 
 /* ── TOP UTILITY BAR ── */
-.topbar{background:#1a1a2e;color:rgba(255,255,255,.75);font-size:11px;padding:5px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px}
-.topbar-left{display:flex;align-items:center;gap:16px}
-.topbar-right{display:flex;align-items:center;gap:12px}
-.topbar a{color:rgba(255,255,255,.7);font-size:11px;display:flex;align-items:center;gap:4px;transition:color .15s}
-.topbar a:hover{color:#C9A84C}
+.topbar{background:#0a2340;color:rgba(255,255,255,.8);font-size:1rem;padding:12px 60px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;width:100%}
+.topbar-left{display:flex;align-items:center;gap:6px}
+.topbar-center{flex:1;text-align:center;opacity:.85;font-size:.95rem}
+.topbar-right{display:flex;align-items:center;gap:18px}
+.topbar a{color:rgba(255,255,255,.75);font-size:1rem;display:flex;align-items:center;gap:4px;transition:color .15s}
+.topbar a:hover{color:#f0c93d}
 .topbar-sep{color:rgba(255,255,255,.25)}
 
-/* ── HEADER ── */
-.header{background:#fff;border-bottom:2px solid #e8e8e8;padding:8px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.logo-wrap{display:flex;align-items:center;gap:10px}
-.logo-img{width:70px;height:70px;object-fit:contain}
-.logo-text .l1{font-size:11px;color:#555;letter-spacing:.5px;text-transform:uppercase}
-.logo-text .l2{font-size:22px;font-weight:800;color:#002060;line-height:1.1;letter-spacing:-.3px}
-.logo-text .l3{font-size:10.5px;color:#777;margin-top:2px}
+/* ── HEADER (logo + nav combined, matches real site layout) ── */
+.header{background:#fff;border-bottom:2px solid #e8e8e8;padding:14px 60px;display:flex;align-items:center;justify-content:space-between;gap:36px;flex-wrap:wrap;position:sticky;top:0;z-index:500;box-shadow:0 2px 8px rgba(0,0,0,.06);width:100%}
+.logo-wrap{display:flex;align-items:center;gap:14px;flex-shrink:0}
+.logo-crest{width:78px;height:78px;border-radius:50%;background:linear-gradient(135deg,#0a2340,#003580);border:3px solid #f0c93d;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-crest span{font-size:28px;font-weight:900;color:#f0c93d;letter-spacing:-.5px}
+.logo-text .l1{font-size:1.6rem;font-weight:800;color:#0a2340;letter-spacing:.3px}
+.logo-text .l2{font-size:.9rem;color:#777;letter-spacing:1px;margin-top:3px}
 .header-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.hdr-btn{padding:7px 14px;border-radius:3px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
-.hdr-login{background:#002060;color:#fff}
-.hdr-login:hover{background:#003087}
-.hdr-admit{background:#C9A84C;color:#fff}
-.hdr-admit:hover{background:#a8862f}
-.header-social{display:flex;gap:6px;align-items:center}
-.soc-icon{width:26px;height:26px;border-radius:50%;background:#e8e8e8;display:flex;align-items:center;justify-content:center;font-size:11px;color:#444;transition:all .15s;font-weight:700}
-.soc-icon:hover{background:#002060;color:#fff}
+.hdr-btn{padding:14px 32px;border-radius:5px;font-size:1.1rem;font-weight:700;cursor:pointer;border:none;transition:all .15s}
+.hdr-login{background:#f0c93d;color:#0a2340}
+.hdr-login:hover{background:#d9ae1f}
 
-/* ── SUB HEADER LINKS ── */
-.sub-header{background:#f5f5f5;border-bottom:1px solid #ddd;padding:5px 20px;display:flex;gap:0;flex-wrap:wrap}
-.sub-header a{font-size:11px;color:#444;padding:4px 10px;border-right:1px solid #ddd;display:flex;align-items:center;gap:4px;transition:color .15s}
-.sub-header a:last-child{border-right:none}
-.sub-header a:hover{color:#002060}
-
-/* ── NAVIGATION ── */
-.nav-wrap{background:#002060;position:sticky;top:0;z-index:500;box-shadow:0 2px 8px rgba(0,0,0,.2)}
-.nav{display:flex;align-items:stretch;padding:0 20px;max-width:100%;overflow-x:auto}
+/* ── NAVIGATION (inline within header row) ── */
+.nav{display:flex;align-items:stretch;flex-wrap:wrap;gap:4px}
 .nav-item{position:relative}
-.nav-item>a{color:rgba(255,255,255,.88);padding:13px 14px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:4px;white-space:nowrap;border-bottom:3px solid transparent;transition:all .2s;cursor:pointer}
-.nav-item>a:hover,.nav-item>a.active{color:#C9A84C;border-bottom-color:#C9A84C;background:rgba(255,255,255,.05)}
-.nav-item>a .arr{font-size:9px;opacity:.6}
-.dropdown{position:absolute;top:100%;left:0;min-width:220px;background:#fff;box-shadow:0 6px 24px rgba(0,0,0,.15);border-top:3px solid #C9A84C;z-index:1000;display:none;flex-direction:column}
+.nav-item>a{color:#333;padding:13px 19px;font-size:1.1rem;font-weight:600;display:flex;align-items:center;gap:5px;white-space:nowrap;border-radius:22px;transition:all .2s;cursor:pointer}
+.nav-item>a:hover{background:#f0f4fa;color:#0a2340}
+.nav-item>a.active{background:#00713d;color:#fff}
+.nav-item>a .arr{font-size:.8rem;opacity:.6}
+.dropdown{position:absolute;top:100%;left:0;min-width:290px;background:#fff;box-shadow:0 6px 24px rgba(0,0,0,.15);border-top:3px solid #f0c93d;z-index:1000;display:none;flex-direction:column;margin-top:6px}
 .nav-item:hover .dropdown{display:flex}
-.dropdown a{padding:9px 16px;font-size:12.5px;color:#333;border-bottom:1px solid #f0f0f0;transition:background .1s}
+.dropdown a{padding:14px 22px;font-size:1.05rem;color:#333;border-bottom:1px solid #f0f0f0;transition:background .1s}
 .dropdown a:last-child{border-bottom:none}
-.dropdown a:hover{background:#f5f8ff;color:#002060;padding-left:20px}
+.dropdown a:hover{background:#f5f8ff;color:#0a2340;padding-left:26px}
 
 /* ── ANNOUNCEMENT TICKER ── */
-.ticker-bar{background:#FFF9E6;border-bottom:1px solid #F0D060;padding:7px 20px;display:flex;align-items:center;gap:12px;overflow:hidden}
-.ticker-label{background:#002060;color:#fff;padding:3px 10px;border-radius:2px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.ticker-bar{background:#FFF9E6;border-bottom:1px solid #F0D060;padding:10px 40px;display:flex;align-items:center;gap:16px;overflow:hidden}
+.ticker-label{background:#0a2340;color:#fff;padding:5px 14px;border-radius:3px;font-size:.8rem;font-weight:700;white-space:nowrap;flex-shrink:0}
 .ticker-track{overflow:hidden;flex:1;position:relative}
 .ticker-inner{display:inline-flex;gap:0;animation:tickerScroll 40s linear infinite;white-space:nowrap}
-.ticker-inner span{font-size:11.5px;color:#002060;padding:0 40px}
-.ticker-inner span::before{content:"● ";color:#C9A84C;font-size:8px;vertical-align:middle;margin-right:4px}
+.ticker-inner span{font-size:1rem;font-weight:700;color:#0a2340;padding:0 40px}
+.ticker-inner span::before{content:"● ";color:#f0c93d;font-size:8px;vertical-align:middle;margin-right:4px}
 @keyframes tickerScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 .ticker-track:hover .ticker-inner{animation-play-state:paused}
 
 /* ── HERO SLIDER ── */
-.hero{position:relative;background:linear-gradient(135deg,#001848 0%,#002060 50%,#003580 100%);min-height:420px;display:flex;align-items:center;justify-content:center;overflow:hidden;text-align:center;color:#fff;padding:40px 20px}
+.hero{position:relative;background:linear-gradient(135deg,#001848 0%,#0a2340 50%,#003580 100%);min-height:720px;display:flex;align-items:center;justify-content:center;overflow:hidden;text-align:center;color:#fff;padding:80px 60px;width:100%}
 .hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.025'%3E%3Cpath d='M0 0h80v80H0z' fill='none'/%3E%3Ccircle cx='40' cy='40' r='30'/%3E%3C/g%3E%3C/svg%3E")}
-.hero-content{position:relative;max-width:900px}
-.hero-sub{font-size:11px;letter-spacing:2px;text-transform:uppercase;opacity:.65;margin-bottom:8px}
-.hero-title{font-size:42px;font-weight:900;letter-spacing:-1px;line-height:1.1;margin-bottom:6px}
-.hero-title span{color:#C9A84C}
-.hero-motto{font-size:14px;opacity:.7;margin-bottom:28px;font-style:italic}
-.hero-badges{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:32px}
-.h-badge{background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.35);color:#C9A84C;padding:5px 14px;border-radius:20px;font-size:11px;font-weight:600}
-.hero-ranks{display:flex;justify-content:center;gap:24px;flex-wrap:wrap}
-.rank-box{text-align:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:14px 18px;min-width:110px}
-.rank-n{font-size:38px;font-weight:900;color:#C9A84C;line-height:1}
-.rank-n sup{font-size:18px}
-.rank-l{font-size:9.5px;opacity:.65;margin-top:4px;line-height:1.4}
-.hero-week{font-size:11px;opacity:.5;margin-top:20px}
+.hero-content{position:relative;width:100%;max-width:1900px;margin:0 auto}
+.hero-sub{font-size:1.2rem;letter-spacing:3px;text-transform:uppercase;opacity:.7;margin-bottom:18px}
+.hero-title{font-size:6.5rem;font-weight:900;letter-spacing:-1px;line-height:1.05;margin-bottom:22px}
+.hero-title span{color:#f0c93d}
+.hero-motto{font-size:1.6rem;opacity:.8;margin-bottom:48px;font-style:italic}
+.hero-badges{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:52px}
+.h-badge{background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.35);color:#f0c93d;padding:11px 26px;border-radius:24px;font-size:1.1rem;font-weight:600}
+.hero-ranks{display:flex;justify-content:center;gap:36px;flex-wrap:wrap}
+.rank-box{text-align:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:28px 36px;min-width:180px}
+.rank-n{font-size:4.2rem;font-weight:900;color:#f0c93d;line-height:1}
+.rank-n sup{font-size:1.8rem}
+.rank-l{font-size:1rem;opacity:.75;margin-top:8px;line-height:1.4}
+.hero-week{font-size:1.05rem;opacity:.6;margin-top:34px}
+.it-section{margin-top:60px;padding-top:48px;border-top:1px solid rgba(255,255,255,.12);width:100%}
+.it-title{font-size:2.4rem;font-weight:800;color:#fff;margin-bottom:36px;letter-spacing:.3px}
+.it-title b{color:#f0c93d}
+.it-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:22px;width:100%;max-width:1700px;margin:0 auto}
+.it-card{background:rgba(0,113,61,.18);border:1.5px solid #00713d;border-radius:14px;padding:22px}
+.it-cat{background:#f0c93d;color:#0a2340;font-weight:800;font-size:1.05rem;padding:6px 18px;border-radius:14px;display:inline-block;margin-bottom:16px}
+.it-nums{display:flex;gap:14px;justify-content:center}
+.it-num{background:rgba(255,255,255,.08);border-radius:10px;padding:12px 16px;min-width:90px}
+.it-num b{display:block;font-size:2.1rem;color:#f0c93d}
+.it-num small{font-size:.85rem;opacity:.75;display:block;margin-top:4px;line-height:1.3}
+.it-tagline{margin-top:40px;font-style:italic;font-size:1.6rem;color:#f0c93d;opacity:.9}
 
 /* ── SECTION ── */
-.section{padding:36px 20px}
-.sec-title{font-size:20px;font-weight:700;color:#002060;margin-bottom:4px}
-.sec-title::after{content:'';display:block;width:48px;height:3px;background:#C9A84C;margin-top:6px;margin-bottom:20px}
-.sec-sub{font-size:13px;color:#666;margin-bottom:20px}
+.section{padding:80px 60px;width:100%}
+.sec-title{font-size:2.6rem;font-weight:700;color:#0a2340;margin-bottom:8px}
+.sec-title::after{content:'';display:block;width:70px;height:5px;background:#f0c93d;margin-top:14px;margin-bottom:38px}
+.sec-sub{font-size:1.15rem;color:#666;margin-bottom:38px}
 
 /* ── QUICK LINKS GRID ── */
-.quickgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
-.qcard{background:#fff;border:1px solid #e8e8e8;border-radius:6px;padding:18px 14px;text-align:center;transition:all .15s;cursor:default;box-shadow:0 1px 4px rgba(0,0,0,.05)}
-.qcard:hover{border-color:#002060;box-shadow:0 4px 16px rgba(0,32,96,.1);transform:translateY(-2px)}
-.qcard-icon{font-size:26px;margin-bottom:8px}
-.qcard-title{font-size:13px;font-weight:700;color:#002060;margin-bottom:4px}
-.qcard-text{font-size:11px;color:#777;line-height:1.5}
+.quickgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px;width:100%}
+.qcard{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:36px 26px;text-align:center;transition:all .15s;cursor:default;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.qcard:hover{border-color:#0a2340;box-shadow:0 4px 16px rgba(0,32,96,.1);transform:translateY(-2px)}
+.qcard-icon{font-size:2.8rem;margin-bottom:16px}
+.qcard-title{font-size:1.4rem;font-weight:700;color:#0a2340;margin-bottom:8px}
+.qcard-text{font-size:1.05rem;color:#777;line-height:1.5}
 
 /* ── STATS BAR ── */
-.stats-bar{background:#002060;padding:28px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:16px;text-align:center}
-.stat-n{font-size:30px;font-weight:900;color:#C9A84C}
-.stat-l{font-size:11px;color:rgba(255,255,255,.65);margin-top:3px}
+.stats-bar-outer{background:#0a2340;padding:64px 60px;width:100%}
+.stats-bar{width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:32px;text-align:center}
+.stat-n{font-size:3.4rem;font-weight:900;color:#f0c93d}
+.stat-l{font-size:1.1rem;color:rgba(255,255,255,.65);margin-top:8px}
 
 /* ── SCHOOLS SECTION ── */
-.schools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
-.school-card{background:#f8f9fd;border-left:4px solid #002060;border-radius:4px;padding:14px;transition:all .15s;cursor:default}
-.school-card:hover{background:#eef2ff;border-left-color:#C9A84C}
-.school-name{font-size:13px;font-weight:700;color:#002060;margin-bottom:4px}
-.school-courses{font-size:11px;color:#666}
+.schools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:24px;width:100%}
+.school-card{background:#f8f9fd;border-left:5px solid #0a2340;border-radius:8px;padding:28px;transition:all .15s;cursor:default}
+.school-card:hover{background:#eef2ff;border-left-color:#f0c93d}
+.school-name{font-size:1.4rem;font-weight:700;color:#0a2340;margin-bottom:8px}
+.school-courses{font-size:1.05rem;color:#666}
 
 /* ── NOTICES SECTION ── */
-.notices-list{list-style:none}
-.notice-item{border-bottom:1px solid #eee;padding:10px 0;display:flex;align-items:flex-start;gap:10px}
+.notices-list{list-style:none;width:100%}
+.notice-item{border-bottom:1px solid #eee;padding:22px 0;display:flex;align-items:flex-start;gap:18px}
 .notice-item:last-child{border-bottom:none}
-.notice-date{background:#002060;color:#fff;font-size:10px;padding:3px 8px;border-radius:3px;white-space:nowrap;flex-shrink:0;font-weight:600}
-.notice-text{font-size:12.5px;color:#333;line-height:1.5}
+.notice-date{background:#0a2340;color:#fff;font-size:.95rem;padding:7px 14px;border-radius:5px;white-space:nowrap;flex-shrink:0;font-weight:600}
+.notice-text{font-size:1.25rem;color:#333;line-height:1.5}
 
 /* ── FOOTER ── */
-.footer{background:#001040;color:rgba(255,255,255,.7);padding:32px 20px 16px}
-.footer-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:28px;margin-bottom:24px}
-.footer-col h4{color:#C9A84C;font-size:13px;font-weight:700;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px}
-.footer-col p,.footer-col a{font-size:12px;color:rgba(255,255,255,.6);line-height:2;display:block;transition:color .15s}
-.footer-col a:hover{color:#C9A84C}
-.footer-bottom{border-top:1px solid rgba(255,255,255,.1);padding-top:16px;text-align:center;font-size:11px;color:rgba(255,255,255,.4)}
+.footer{background:#001040;color:rgba(255,255,255,.7);padding:72px 60px 30px;width:100%}
+.footer-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:44px;margin-bottom:40px;width:100%}
+.footer-col h4{color:#f0c93d;font-size:1.2rem;font-weight:700;margin-bottom:20px;text-transform:uppercase;letter-spacing:.5px}
+.footer-col p,.footer-col a{font-size:1.1rem;color:rgba(255,255,255,.6);line-height:2;display:block;transition:color .15s}
+.footer-col a:hover{color:#f0c93d}
+.footer-bottom{border-top:1px solid rgba(255,255,255,.1);padding-top:24px;text-align:center;font-size:1rem;color:rgba(255,255,255,.4)}
 
 /* ══════════════════════════════════════
    CHATBOT
 ══════════════════════════════════════ */
-#fab{position:fixed;bottom:24px;right:24px;width:58px;height:58px;background:#002060;border:none;border-radius:50%;cursor:pointer;box-shadow:0 4px 20px rgba(0,32,96,.45);display:flex;align-items:center;justify-content:center;z-index:9000;transition:transform .2s,box-shadow .2s}
+#fab{position:fixed;bottom:24px;right:24px;width:87px;height:87px;background:#0a2340;border:none;border-radius:50%;cursor:pointer;box-shadow:0 4px 20px rgba(0,32,96,.45);display:flex;align-items:center;justify-content:center;z-index:9000;transition:transform .2s,box-shadow .2s}
 #fab:hover{transform:scale(1.1);box-shadow:0 8px 28px rgba(0,32,96,.55)}
-#fab svg{width:26px;height:26px;fill:#fff}
-#fab-pulse{position:absolute;top:-3px;right:-3px;width:18px;height:18px;background:#e63946;border-radius:50%;border:2px solid #fff;font-size:9px;font-weight:800;color:#fff;display:flex;align-items:center;justify-content:center;animation:pulse 2s ease-in-out infinite}
+#fab svg{width:39px;height:39px;fill:#fff}
+#fab-pulse{position:absolute;top:-3px;right:-3px;width:27px;height:27px;background:#e63946;border-radius:50%;border:3px solid #fff;font-size:13px;font-weight:800;color:#fff;display:flex;align-items:center;justify-content:center;animation:pulse 2s ease-in-out infinite}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.fab-label{position:fixed;right:121px;bottom:53px;background:#fff;color:#e63946;font-weight:800;font-size:16px;padding:9px 18px;border-radius:22px;box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:8999;white-space:nowrap;font-family:'Poppins',sans-serif}
 
-#chat-win{position:fixed;bottom:96px;right:24px;width:360px;max-height:560px;background:#fff;border-radius:16px;box-shadow:0 12px 48px rgba(0,0,0,.22);display:flex;flex-direction:column;z-index:8999;border:1px solid rgba(0,32,96,.1);transform:scale(.95) translateY(12px);opacity:0;pointer-events:none;transition:transform .22s ease,opacity .22s ease}
+/* ── Floating action buttons (WhatsApp + Share, stacked above the AI chat FAB) ── */
+.float-extra{position:fixed;right:24px;z-index:8500;width:75px;height:75px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.25);transition:transform .2s;text-decoration:none;border:none}
+.float-extra:hover{transform:scale(1.08)}
+.float-whatsapp{background:#25D366;bottom:127px}
+.float-whatsapp svg{width:36px;height:36px;fill:#fff}
+.float-share{background:#fff;border:2px solid #0a2340;bottom:218px}
+.float-share svg{width:27px;height:27px;fill:#0a2340}
+
+/* ── Vertical "Admissions Open" tab ── */
+.admit-tab{position:fixed;right:0;top:50%;background:#f0c93d;color:#0a2340;font-weight:800;font-size:18px;letter-spacing:1.5px;padding:24px 11px;border-radius:12px 0 0 12px;cursor:pointer;z-index:400;box-shadow:-2px 0 8px rgba(0,0,0,.15);writing-mode:vertical-rl;transform:translateY(-50%) rotate(180deg);transform-origin:center;transition:padding .15s;border:none}
+.admit-tab:hover{padding-right:16px}
+
+#chat-win{position:fixed;bottom:123px;right:24px;width:540px;max-height:840px;background:#fff;border-radius:22px;box-shadow:0 12px 48px rgba(0,0,0,.22);display:flex;flex-direction:column;z-index:8999;border:1px solid rgba(0,32,96,.1);transform:scale(.95) translateY(12px);opacity:0;pointer-events:none;transition:transform .22s ease,opacity .22s ease}
 #chat-win.open{transform:scale(1) translateY(0);opacity:1;pointer-events:all}
 
-.cw-head{background:linear-gradient(135deg,#002060,#003580);color:#fff;padding:14px 16px;border-radius:16px 16px 0 0;display:flex;align-items:center;gap:10px;flex-shrink:0}
-.cw-av{width:40px;height:40px;background:#C9A84C;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#002060;flex-shrink:0}
+.cw-head{background:linear-gradient(135deg,#0a2340,#003580);color:#fff;padding:21px 24px;border-radius:22px 22px 0 0;display:flex;align-items:center;gap:14px;flex-shrink:0}
+.cw-av{width:60px;height:60px;background:#f0c93d;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;color:#0a2340;flex-shrink:0;overflow:hidden}
+.cw-av img,.cav img{width:100%;height:100%;object-fit:cover;object-position:center;border-radius:50%;display:block}
 .cw-info{flex:1}
-.cw-name{font-weight:700;font-size:14px}
-.cw-status{font-size:11px;opacity:.7;margin-top:1px;display:flex;align-items:center;gap:4px}
-.cw-dot{width:7px;height:7px;background:#4ade80;border-radius:50%;display:inline-block}
-.cw-close{background:rgba(255,255,255,.12);border:none;border-radius:50%;width:28px;height:28px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0}
+.cw-name{font-weight:700;font-size:21px}
+.cw-status{font-size:16px;opacity:.7;margin-top:2px;display:flex;align-items:center;gap:6px}
+.cw-dot{width:10px;height:10px;background:#4ade80;border-radius:50%;display:inline-block}
+.cw-close{background:rgba(255,255,255,.12);border:none;border-radius:50%;width:42px;height:42px;color:#fff;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0}
 .cw-close:hover{background:rgba(255,255,255,.25)}
 
-.cw-chips{padding:8px 12px;background:#f0f4fc;border-bottom:1px solid #dde6f4;display:flex;flex-wrap:wrap;gap:5px;flex-shrink:0}
-.cchip{background:#fff;border:1px solid #002060;color:#002060;border-radius:20px;padding:4px 11px;font-size:11px;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
-.cchip:hover{background:#002060;color:#fff}
+.cw-chips{padding:12px 18px;background:#f0f4fc;border-bottom:1px solid #dde6f4;display:flex;flex-wrap:wrap;gap:8px;flex-shrink:0}
+.cchip{background:#fff;border:1px solid #0a2340;color:#0a2340;border-radius:26px;padding:7px 17px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
+.cchip:hover{background:#0a2340;color:#fff}
 
-.cw-msgs{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:10px;background:#f5f7fb;min-height:0}
-.cmsg{display:flex;gap:8px;align-items:flex-end}
+.cw-msgs{flex:1;overflow-y:auto;padding:21px 18px;display:flex;flex-direction:column;gap:15px;background:#f5f7fb;min-height:0}
+.cmsg{display:flex;gap:12px;align-items:flex-end}
 .cmsg.bot{align-self:flex-start;max-width:90%}
 .cmsg.usr{align-self:flex-end;flex-direction:row-reverse;max-width:88%}
-.cbub{padding:10px 14px;border-radius:18px;font-size:13px;line-height:1.65}
-.cmsg.bot .cbub{background:#fff;color:#1a1a1a;border-bottom-left-radius:4px;border:1px solid #dde6f0;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-.cmsg.usr .cbub{background:#002060;color:#fff;border-bottom-right-radius:4px}
-.cav{width:28px;height:28px;background:#C9A84C;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#002060;flex-shrink:0}
+.cbub{padding:15px 21px;border-radius:24px;font-size:19px;font-weight:500;line-height:1.6}
+.cmsg.bot .cbub{background:#fff;color:#1a1a1a;border-bottom-left-radius:6px;border:1px solid #dde6f0;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.cmsg.usr .cbub{background:#0a2340;color:#fff;border-bottom-right-radius:6px}
+.cav{width:42px;height:42px;background:#f0c93d;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#0a2340;flex-shrink:0;overflow:hidden}
 
 @keyframes td{0%,60%,100%{transform:translateY(0);opacity:.3}30%{transform:translateY(-5px);opacity:1}}
-.tdot{width:7px;height:7px;border-radius:50%;background:#002060;display:inline-block;animation:td 1.2s ease-in-out infinite;margin:0 2px}
+.tdot{width:10px;height:10px;border-radius:50%;background:#0a2340;display:inline-block;animation:td 1.2s ease-in-out infinite;margin:0 3px}
 
-.cw-inp{padding:10px 12px;border-top:1px solid #e4ecf4;display:flex;gap:8px;background:#fff;border-radius:0 0 16px 16px;flex-shrink:0}
-.cw-inp input{flex:1;border:1.5px solid #dde6f0;border-radius:24px;padding:9px 15px;font-size:13px;font-family:inherit;outline:none;background:#f5f7fb;color:#1a1a1a;transition:border-color .15s,background .15s}
-.cw-inp input:focus{border-color:#002060;background:#fff}
-.csend{width:38px;height:38px;background:#002060;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .15s}
+.cw-inp{padding:15px 18px;border-top:1px solid #e4ecf4;display:flex;gap:12px;background:#fff;border-radius:0 0 22px 22px;flex-shrink:0}
+.cw-inp input{flex:1;border:2px solid #dde6f0;border-radius:30px;padding:14px 22px;font-size:19px;font-weight:500;font-family:inherit;outline:none;background:#f5f7fb;color:#1a1a1a;transition:border-color .15s,background .15s}
+.cw-inp input:focus{border-color:#0a2340;background:#fff}
+.csend{width:57px;height:57px;background:#0a2340;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .15s}
 .csend:disabled{opacity:.4;cursor:not-allowed}
-.csend svg{width:16px;height:16px;fill:#fff}
-.cw-foot{text-align:center;font-size:10px;color:#bbb;padding:4px 0 6px;background:#fff;border-top:1px solid #f0f0f0;border-radius:0 0 16px 16px;flex-shrink:0}
-.cw-foot b{color:#002060}
+.csend svg{width:24px;height:24px;fill:#fff}
+.cw-foot{text-align:center;font-size:15px;color:#999;padding:6px 0 9px;background:#fff;border-top:1px solid #f0f0f0;border-radius:0 0 22px 22px;flex-shrink:0}
+.cw-foot b{color:#0a2340}
 
 /* ── Admission Assistant components ── */
-.cw-startover{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:16px;padding:4px 12px;font-size:11px;cursor:pointer;font-family:inherit;transition:background .15s;white-space:nowrap}
+.cw-startover{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:20px;padding:6px 17px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s;white-space:nowrap}
 .cw-startover:hover{background:rgba(255,255,255,.3)}
-.lvl-btns{display:flex;gap:10px;margin:6px 0 2px 36px}
-.lvl-btn{flex:1;background:#fff;border:2px solid #002060;color:#002060;border-radius:12px;padding:14px 10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;text-align:center}
-.lvl-btn:hover{background:#002060;color:#fff;transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,32,96,.25)}
-.lvl-btn small{display:block;font-size:10px;font-weight:400;opacity:.7;margin-top:3px}
-.opt-cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 2px 36px}
-.opt-card{background:#fff;border:1.5px solid #dde6f4;border-radius:10px;padding:11px 10px;font-size:12px;font-weight:600;color:#002060;cursor:pointer;font-family:inherit;transition:all .15s;text-align:left;display:flex;align-items:center;gap:7px}
-.opt-card:hover{border-color:#C9A84C;background:#fffbf0;transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.08)}
-.opt-card .oc-ic{font-size:16px}
+.lvl-btns{display:flex;gap:15px;margin:9px 0 3px 54px}
+.lvl-btn{flex:1;background:#fff;border:3px solid #0a2340;color:#0a2340;border-radius:18px;padding:21px 15px;font-size:21px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;text-align:center}
+.lvl-btn:hover{background:#0a2340;color:#fff;transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,32,96,.25)}
+.lvl-btn small{display:block;font-size:15px;font-weight:500;opacity:.7;margin-top:4px}
+.opt-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:9px 0 3px 54px}
+.opt-card{background:#fff;border:2px solid #dde6f4;border-radius:15px;padding:17px 15px;font-size:18px;font-weight:600;color:#0a2340;cursor:pointer;font-family:inherit;transition:all .15s;text-align:left;display:flex;align-items:center;gap:10px}
+.opt-card:hover{border-color:#f0c93d;background:#fffbf0;transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.08)}
+.opt-card .oc-ic{font-size:24px}
 .search-wrap{position:relative;flex:1}
-.search-drop{position:absolute;bottom:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid #dde6f4;border-radius:12px;box-shadow:0 -6px 24px rgba(0,0,0,.14);max-height:220px;overflow-y:auto;display:none;z-index:50}
+.search-drop{position:absolute;bottom:calc(100% + 9px);left:0;right:0;background:#fff;border:1px solid #dde6f4;border-radius:18px;box-shadow:0 -6px 24px rgba(0,0,0,.14);max-height:330px;overflow-y:auto;display:none;z-index:50}
 .search-drop.show{display:block}
-.sd-item{padding:10px 14px;font-size:12.5px;color:#333;cursor:pointer;border-bottom:1px solid #f4f6fa;transition:background .1s}
+.sd-item{padding:15px 21px;font-size:21px;font-weight:700;color:#0a2340;cursor:pointer;border-bottom:1px solid #f4f6fa;transition:background .1s}
 .sd-item:last-child{border-bottom:none}
-.sd-item:hover,.sd-item.active{background:#eef3ff;color:#002060;font-weight:600}
-.sd-empty{padding:10px 14px;font-size:12px;color:#999}
-.link-card{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1.5px solid #C9A84C;border-radius:10px;padding:9px 14px;font-size:12.5px;font-weight:600;color:#002060;text-decoration:none;margin-top:6px;transition:all .15s}
+.sd-item:hover,.sd-item.active{background:#eef3ff;color:#0a2340;font-weight:600}
+.sd-empty{padding:15px 21px;font-size:18px;color:#999}
+.link-card{display:inline-flex;align-items:center;gap:12px;background:#fff;border:2px solid #f0c93d;border-radius:15px;padding:14px 21px;font-size:19px;font-weight:600;color:#0a2340;text-decoration:none;margin-top:9px;transition:all .15s}
 .link-card:hover{background:#fffbf0;box-shadow:0 3px 10px rgba(201,168,76,.3)}
 </style>
 </head>
@@ -195,64 +217,29 @@ img{max-width:100%}
 <!-- TOP UTILITY BAR -->
 <div class="topbar">
   <div class="topbar-left">
-    <span>📍 36, Lalbagh Road, Bengaluru-560027</span>
-    <span class="topbar-sep">|</span>
-    <a href="tel:08022274079">📞 080-2227-4079</a>
-    <span class="topbar-sep">|</span>
-    <a href="mailto:pro@sju.edu.in">✉ pro@sju.edu.in</a>
+    <span>📍 36, Lalbagh Road, Bengaluru-560027, Karnataka, India.</span>
   </div>
+  <div class="topbar-center">A Public-Private-Partnership University under RUSA 2.0 of MHRD (Government of India), established by the Karnataka Govt. Act No. 24 of 2021</div>
   <div class="topbar-right">
-    <a href="https://alumni.sju.edu.in/" target="_blank">Alumni</a>
+    <a href="https://sjudata.s3.ap-south-1.amazonaws.com/University+Docs/UGC-Proforma_.pdf" target="_blank">UGC Proforma/Mandatory Disclosure</a>
     <span class="topbar-sep">|</span>
-    <a href="https://sjric.res.in/" target="_blank">Research</a>
+    <a href="https://www.sju.edu.in/about/iqac/sju-iqac-nirf.php" target="_blank">NIRF</a>
     <span class="topbar-sep">|</span>
-    <a href="https://www.sju.edu.in/about/iqac/iqac.php" target="_blank">IQAC</a>
-    <span class="topbar-sep">|</span>
-    <a href="https://www.sju.edu.in/announcements.php" target="_blank">Notices</a>
-    <span class="topbar-sep">|</span>
-    <a href="https://www.sju.edu.in/library/library.php" target="_blank">Library</a>
-    <span class="topbar-sep">|</span>
-    <a href="https://www.sju.edu.in/internationalstudents/internationalstudents.php" target="_blank">International Students</a>
+    <a href="https://admissions.sju.edu.in/" target="_blank">Admissions</a>
   </div>
 </div>
 
-<!-- HEADER -->
+<!-- HEADER (logo + nav combined) -->
 <div class="header">
   <div class="logo-wrap">
-    <img class="logo-img" src="https://www.sju.edu.in/assets/img/st-joseph-university-logo.png" alt="SJU Logo" onerror="this.style.display='none'">
+    <img src="/static/logo.jpg" alt="St Joseph's University" style="width:120px;height:120px;object-fit:contain;border-radius:0">
     <div class="logo-text">
-      <div class="l1">St Joseph's University</div>
-      <div class="l2">BENGALURU INDIA</div>
-      <div class="l3">A Public-Private-Partnership University · RUSA 2.0 · NAAC A++</div>
+      <div class="l1">ST JOSEPH'S UNIVERSITY</div>
+      <div class="l2">BENGALURU · INDIA</div>
     </div>
   </div>
-  <div class="header-right">
-    <div class="header-social">
-      <a class="soc-icon" href="https://www.facebook.com/sjubengaluru" target="_blank">f</a>
-      <a class="soc-icon" href="https://twitter.com/sjcbengaluru" target="_blank">𝕏</a>
-      <a class="soc-icon" href="https://www.instagram.com/sjubengaluru/" target="_blank">📷</a>
-      <a class="soc-icon" href="https://www.youtube.com/@SJUBengaluru" target="_blank">▶</a>
-    </div>
-    <a href="https://www.sju.edu.in/erp-login.php" target="_blank" class="hdr-btn hdr-login">Login</a>
-    <a href="https://admissions.sju.edu.in/" target="_blank" class="hdr-btn hdr-admit">Admissions Open</a>
-  </div>
-</div>
 
-<!-- SUB HEADER -->
-<div class="sub-header">
-  <a href="https://sjudata.s3.ap-south-1.amazonaws.com/University+Docs/UGC-Proforma_.pdf" target="_blank">📄 UGC Proforma</a>
-  <a href="https://www.sju.edu.in/about/iqac/sju-iqac-nirf.php" target="_blank">🏆 NIRF</a>
-  <a href="https://www.sju.edu.in/admissions/admissions.php" target="_blank">🎓 Admissions</a>
-  <a href="https://www.sju.edu.in/publicself-disclosure.php" target="_blank">📋 Public Disclosure</a>
-  <a href="https://www.sju.edu.in/climateandworldclock.php" target="_blank">🌍 Climate Clock</a>
-  <a href="https://www.sju.edu.in/bulletin/sjuannualreport.php" target="_blank">📊 Annual Report</a>
-  <a href="https://wa.me/9480811912" target="_blank">💬 WhatsApp</a>
-</div>
-
-<!-- NAVIGATION -->
-<div class="nav-wrap">
   <nav class="nav">
-
     <div class="nav-item"><a class="active" href="#">Home</a></div>
 
     <div class="nav-item">
@@ -348,8 +335,11 @@ img{max-width:100%}
         <a href="https://www.sju.edu.in/student-support/sjureadmission.php" target="_blank">Readmissions 2026-27</a>
       </div>
     </div>
-
   </nav>
+
+  <div class="header-right">
+    <a href="https://www.sju.edu.in/erp-login.php" target="_blank" class="hdr-btn hdr-login">Login</a>
+  </div>
 </div>
 
 <!-- ANNOUNCEMENT TICKER -->
@@ -392,21 +382,59 @@ img{max-width:100%}
       <div class="rank-box"><div class="rank-n">4<sup>th</sup></div><div class="rank-l">Pvt & Deemed Multidisciplinary<br>(Karnataka)</div></div>
     </div>
     <div class="hero-week">Following rank declared by "The Week Magazine University Ranking 2026"</div>
+
+    <div class="it-section">
+      <div class="it-title">SJU SHINES AT THE <b>INDIA TODAY RANKING 2026</b></div>
+      <div class="it-grid">
+        <div class="it-card"><span class="it-cat">Arts</span><div class="it-nums">
+          <div class="it-num"><b>14<sup>th</sup></b><small>Rank in India</small></div>
+          <div class="it-num"><b>3<sup>rd</sup></b><small>In the City</small></div>
+        </div></div>
+        <div class="it-card"><span class="it-cat">Science</span><div class="it-nums">
+          <div class="it-num"><b>8<sup>th</sup></b><small>Rank in India</small></div>
+          <div class="it-num"><b>1<sup>st</sup></b><small>In the City</small></div>
+        </div></div>
+        <div class="it-card"><span class="it-cat">Commerce</span><div class="it-nums">
+          <div class="it-num"><b>41<sup>st</sup></b><small>Rank in India</small></div>
+          <div class="it-num"><b>7<sup>th</sup></b><small>In the City</small></div>
+        </div></div>
+        <div class="it-card"><span class="it-cat">BCA</span><div class="it-nums">
+          <div class="it-num"><b>6<sup>th</sup></b><small>Rank in India</small></div>
+          <div class="it-num"><b>3<sup>rd</sup></b><small>In the City</small></div>
+        </div></div>
+        <div class="it-card"><span class="it-cat">Social Work</span><div class="it-nums">
+          <div class="it-num"><b>16<sup>th</sup></b><small>Rank in India</small></div>
+          <div class="it-num"><b>3<sup>rd</sup></b><small>In the City</small></div>
+        </div></div>
+        <div class="it-card"><span class="it-cat">Mass Communication</span><div class="it-nums">
+          <div class="it-num"><b>12<sup>th</sup></b><small>Rank in India</small></div>
+          <div class="it-num"><b>2<sup>nd</sup></b><small>In the City</small></div>
+        </div></div>
+        <div class="it-card"><span class="it-cat">BBA</span><div class="it-nums">
+          <div class="it-num"><b>50<sup>th</sup></b><small>Rank in India</small></div>
+          <div class="it-num"><b>10<sup>th</sup></b><small>In the City</small></div>
+        </div></div>
+      </div>
+      <div class="it-tagline">"We Rise Together, We Inspire Forever"</div>
+    </div>
   </div>
 </div>
 
 <!-- STATS -->
-<div class="stats-bar">
+<div class="stats-bar-outer">
+ <div class="stats-bar">
   <div><div class="stat-n">140+</div><div class="stat-l">Years of Excellence</div></div>
   <div><div class="stat-n">9</div><div class="stat-l">Schools of Study</div></div>
   <div><div class="stat-n">50+</div><div class="stat-l">Programmes</div></div>
   <div><div class="stat-n">A++</div><div class="stat-l">NAAC Grade</div></div>
   <div><div class="stat-n">5000+</div><div class="stat-l">Students</div></div>
   <div><div class="stat-n">200+</div><div class="stat-l">Placement Companies</div></div>
+ </div>
 </div>
 
 <!-- QUICK LINKS -->
 <div class="section" style="background:#f8f9fd">
+ <div class="wrap">
   <div class="sec-title">Quick Links</div>
   <div class="quickgrid">
     <div class="qcard"><div class="qcard-icon">🎓</div><div class="qcard-title">Admissions 2026-27</div><div class="qcard-text">Applications open for UG & PG programmes</div></div>
@@ -418,10 +446,12 @@ img{max-width:100%}
     <div class="qcard"><div class="qcard-icon">⚽</div><div class="qcard-title">Sports</div><div class="qcard-text">Football, cricket, basketball, badminton & more</div></div>
     <div class="qcard"><div class="qcard-icon">🔬</div><div class="qcard-title">Research</div><div class="qcard-text">First Karnataka college with a Research Centre</div></div>
   </div>
+ </div>
 </div>
 
 <!-- SCHOOLS -->
 <div class="section">
+ <div class="wrap">
   <div class="sec-title">Schools & Programmes</div>
   <div class="schools-grid">
     <div class="school-card"><div class="school-name">School of Information Technology</div><div class="school-courses">BCA · MCA · MSc CS · MSc Big Data Analytics</div></div>
@@ -434,10 +464,12 @@ img{max-width:100%}
     <div class="school-card"><div class="school-name">School of Social Work</div><div class="school-courses">BSW · MSW</div></div>
     <div class="school-card"><div class="school-name">School of Languages & Literatures</div><div class="school-courses">BA/MA English · Kannada · French · Hindi</div></div>
   </div>
+ </div>
 </div>
 
 <!-- NOTICES -->
 <div class="section" style="background:#f8f9fd">
+ <div class="wrap">
   <div class="sec-title">Latest Notices</div>
   <ul class="notices-list">
     <li class="notice-item"><span class="notice-date">27 May 2026</span><span class="notice-text">Extension of Last Date for Application and Fee Payment – Convocation and Degree Completion Certificates – From 27.05.2026 to 13.06.2026</span></li>
@@ -445,10 +477,12 @@ img{max-width:100%}
     <li class="notice-item"><span class="notice-date">Admissions</span><span class="notice-text">Admissions 2026-27 are now OPEN for all UG and PG programmes. Apply at admissions.sju.edu.in</span></li>
     <li class="notice-item"><span class="notice-date">Rankings</span><span class="notice-text">SJU ranked among India's Best — The Week Magazine University Rankings 2026. 49th All India, 4th in Karnataka.</span></li>
   </ul>
+ </div>
 </div>
 
 <!-- FOOTER -->
 <div class="footer">
+ <div class="wrap">
   <div class="footer-grid">
     <div class="footer-col">
       <h4>St Joseph's University</h4>
@@ -487,21 +521,34 @@ img{max-width:100%}
     © 2026 St Joseph's University, Bengaluru &nbsp;·&nbsp;
     A Public-Private-Partnership University under RUSA 2.0 of MHRD (Govt of India) · Karnataka Govt. Act No. 24 of 2021
     <br><br>
-    <span style="color:#C9A84C;font-size:10px">⚡ AI Chatbot demo built by [Your Name] · MSc Big Data Analytics · SJU 2025-26</span>
+    <span style="color:#f0c93d;font-size:.8rem">⚡ AI Chatbot demo built by [Your Name] · MSc Big Data Analytics · SJU 2025-26</span>
   </div>
+ </div>
 </div>
 
+<!-- ══════════ VERTICAL ADMISSIONS TAB ══════════ -->
+<a class="admit-tab" href="https://admissions.sju.edu.in/" target="_blank">Admissions Open</a>
+
+<!-- ══════════ FLOATING SHARE + WHATSAPP ══════════ -->
+<button class="float-extra float-share" onclick="sharePage()" aria-label="Share this page">
+  <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L7.04 9.81C6.5 9.31 5.79 9 5 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+</button>
+<a class="float-extra float-whatsapp" href="https://wa.me/9480811912" target="_blank" aria-label="Chat on WhatsApp">
+  <svg viewBox="0 0 24 24"><path d="M17.47 14.38c-.29-.15-1.7-.84-1.96-.93-.26-.1-.46-.15-.65.14-.19.29-.75.93-.92 1.12-.17.19-.34.22-.63.07-.29-.15-1.22-.45-2.32-1.43-.86-.76-1.44-1.71-1.61-2-.17-.29-.02-.45.13-.6.13-.13.29-.34.44-.51.15-.17.19-.29.29-.48.1-.19.05-.36-.02-.51-.07-.15-.65-1.58-.9-2.16-.24-.57-.48-.5-.65-.5-.17 0-.36-.02-.56-.02s-.51.07-.78.36c-.26.29-1.01.99-1.01 2.42 0 1.43 1.04 2.81 1.18 3 .15.19 2.04 3.11 4.94 4.37.69.3 1.23.48 1.65.61.69.22 1.32.19 1.82.11.55-.08 1.7-.7 1.94-1.37.24-.67.24-1.24.17-1.37-.07-.12-.26-.19-.55-.34z"/><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.79.47 3.47 1.28 4.93L2 22l5.29-1.39c1.4.77 3.01 1.2 4.72 1.2h.01c5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2zm0 18.13h-.01c-1.5 0-2.98-.4-4.27-1.16l-.31-.18-3.18.83.85-3.1-.2-.32c-.83-1.34-1.28-2.87-1.28-4.42 0-4.61 3.75-8.36 8.4-8.36 2.24 0 4.35.87 5.94 2.46 1.59 1.58 2.46 3.7 2.46 5.93 0 4.61-3.75 8.36-8.4 8.36z"/></svg>
+</a>
+
 <!-- ══════════ CHATBOT ══════════ -->
+<div class="fab-label">Chat</div>
 <button id="fab" onclick="toggleChat()" aria-label="Open SJU AI Chatbot">
-  <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+  <svg viewBox="0 0 24 24"><path d="M12 2a2 2 0 0 1 2 2c0 .55-.22 1.05-.59 1.41A2 2 0 0 1 14 7v1h2a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3v-6a3 3 0 0 1 3-3h2V7a2 2 0 0 1 1-1.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2zM8 10a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1H8zm1.5 2.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm5 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM4 12h1v4H4a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1zm16 0a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-1v-4h1z"/></svg>
   <div id="fab-pulse">AI</div>
 </button>
 
 <div id="chat-win">
   <div class="cw-head">
-    <div class="cw-av">SJ</div>
+    <div class="cw-av"><img src="/static/logo.jpg" alt="SJU" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div>
     <div class="cw-info">
-      <div class="cw-name">SJU Admission Assistant</div>
+      <div class="cw-name">SJU Assistant</div>
       <div class="cw-status"><span class="cw-dot"></span> Online</div>
     </div>
     <button class="cw-startover" onclick="startOver()">⟳ Start Over</button>
@@ -591,6 +638,7 @@ const PROGRAMMES = {
     C("B.Sc. Economics, Mathematics & Statistics", "school-of-humanities-and-social-sciences/department-of-economics/bsc-in-economics-mathematics-and-statistics.php"),
     C("B.Sc. Physics, Electronics & Mathematics", "school-of-physical-sciences/department-of-physics/bsc-in-physics-electronics-mathematics.php"),
     C("B.Sc. Physics, Chemistry & Mathematics", "school-of-physical-sciences/department-of-physics/bsc-in-physics-chemistry-and-mathematics.php"),
+    C("B.Sc. Mathematics, Electronics & Computer Science", "programmes/bsc-in-mathematics-electronics-computer-science"),
   ],
   PG: [
     C("M.Sc. Big Data Analytics", "school-of-information-technology/department-of-advanced-computing/msc-in-big-data-analytics.php"),
@@ -625,7 +673,19 @@ const PROGRAMMES = {
     C("Postgraduate Diploma in Data Analytics", "school-of-information-technology/department-of-advanced-computing/pg-diploma-in-data-analytics.php"),
   ],
   PHD: [
-    C("PhD Programmes (all departments)", PHD_PAGE),
+    C("PhD in Commerce", "school-of-business/department-of-commerce/phd-in-commerce"),
+    C("PhD in Chemistry", "school-of-chemical-sciences/department-of-chemistry/phd-in-chemistry"),
+    C("PhD in Economics", "school-of-humanities-and-social-sciences/department-of-economics/phd-in-economics"),
+    C("PhD in Political Science", "programmes/phd-in-political-science"),
+    C("PhD in Kannada", "school-of-languages-and-literatures/department-of-kannada/phd-in-kannada"),
+    C("PhD in Biotechnology", "school-of-life-sciences/department-of-biotechnology/phd-in-biotechnology"),
+    C("PhD in Botany", "school-of-life-sciences/department-of-botany/phd-in-botany"),
+    C("PhD in Microbiology", "school-of-life-sciences/department-of-microbiology/phd-in-microbiology"),
+    C("PhD in Zoology", "school-of-life-sciences/department-of-zoology/phd-in-zoology"),
+    C("PhD in Mathematics", "school-of-physical-sciences/department-of-mathematics/phd-in-mathematics"),
+    C("PhD in Physics", "school-of-physical-sciences/department-of-physics/phd-in-physics"),
+    C("PhD in Computer Science", "programmes/phd-in-computer-science"),
+    C("PhD in Mass Communication", "programmes/phd-in-mass-communication"),
   ]
 };
 
@@ -647,7 +707,7 @@ function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g
 
 function botMsg(html){
   const d=document.createElement('div'); d.className='cmsg bot';
-  d.innerHTML=`<div class="cav">SJ</div><div class="cbub">${html}</div>`;
+  d.innerHTML=`<div class="cav"><img src="/static/logo.jpg" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div><div class="cbub">${html}</div>`;
   $msgs().appendChild(d); scrollDown();
 }
 function usrMsg(text){
@@ -662,7 +722,7 @@ function rawBlock(html){
 function scrollDown(){ const b=$msgs(); b.scrollTop=b.scrollHeight; }
 function showTyping(){
   const d=document.createElement('div'); d.className='cmsg bot'; d.id='cwTyping';
-  d.innerHTML=`<div class="cav">SJ</div><div class="cbub"><span class="tdot" style="animation-delay:0s"></span><span class="tdot" style="animation-delay:.2s"></span><span class="tdot" style="animation-delay:.4s"></span></div>`;
+  d.innerHTML=`<div class="cav"><img src="/static/logo.jpg" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div><div class="cbub"><span class="tdot" style="animation-delay:0s"></span><span class="tdot" style="animation-delay:.2s"></span><span class="tdot" style="animation-delay:.4s"></span></div>`;
   $msgs().appendChild(d); scrollDown();
 }
 function hideTyping(){ document.getElementById('cwTyping')?.remove(); }
@@ -675,21 +735,22 @@ function startOver(){
   renderWelcome();
 }
 function renderWelcome(){
-  botMsg(`Hi 👋 Welcome to the <strong>SJU Admission Assistant</strong>!<br><br>Choose a programme level, or open any official page below:`);
+  botMsg(`Hi 👋 Welcome to the <strong>SJU Assistant</strong>!<br><br>Choose a programme level, or open any official page below:`);
   rawBlock(`<div class="lvl-btns" style="flex-wrap:wrap">
     <button class="lvl-btn" style="flex-basis:47%" onclick="pickLevel('UG')">🎓 Undergraduate<small>BCA · BSc · BBA · BCom · BA</small></button>
     <button class="lvl-btn" style="flex-basis:47%" onclick="pickLevel('PG')">📚 Postgraduate<small>MSc · MCA · MBA · MA · MSW</small></button>
-    <button class="lvl-btn" style="flex-basis:47%" onclick="pickLevel('PGD')">📜 PG Diploma<small>Data Science · Cyber Security</small></button>
+    <button class="lvl-btn" style="flex-basis:47%" onclick="pickLevel('PGD')">📜 PG Diploma<small>Data Science · Cyber Security · etc</small></button>
     <button class="lvl-btn" style="flex-basis:47%" onclick="pickLevel('PHD')">🔬 PhD Programmes<small>Research degrees</small></button>
   </div>`);
   renderGlobalActions();
+  $msgs().scrollTop = 0;
 }
 const LEVEL_NAMES = { UG:"Undergraduate", PG:"Postgraduate", PGD:"PG Diploma", PHD:"PhD" };
 function pickLevel(level){
   state.level=level; state.course=null;
   const lname=LEVEL_NAMES[level]||level;
   usrMsg(lname);
-  botMsg(`Great! Please <strong>search or select</strong> the ${lname} programme you're interested in. 🔍<br><span style="font-size:11px;opacity:.7">Start typing below — e.g. "data", "computer", "psych"...</span>`);
+  botMsg(`Great! Please <strong>search or select</strong> the ${lname} programme you're interested in. 🔍<br><span style="font-size:14px;font-weight:700;opacity:.7">Start typing below — e.g. "data", "computer", "psych"...</span>`);
   $inp().placeholder=`Search ${lname} programmes...`;
   $inp().focus();
   showDrop(PROGRAMMES[level]);
@@ -805,6 +866,9 @@ document.addEventListener('DOMContentLoaded',function(){
   inp.addEventListener('input',function(){
     if(state.level && !state.course) showDrop(filterCourses(inp.value.trim()));
   });
+  inp.addEventListener('focus',function(){
+    if(state.level && !state.course) showDrop(filterCourses(inp.value.trim()));
+  });
   inp.addEventListener('keydown',function(e){
     const items=$drop().querySelectorAll('.sd-item');
     const dropOpen=$drop().classList.contains('show') && items.length;
@@ -814,7 +878,7 @@ document.addEventListener('DOMContentLoaded',function(){
     if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }
   });
   document.addEventListener('click',function(e){
-    if(!e.target.closest('.search-wrap')) hideDrop();
+    if(!e.target.closest('.search-wrap') && !e.target.closest('.lvl-btn')) hideDrop();
   });
 });
 function highlight(items){
@@ -826,6 +890,15 @@ function toggleChat(){
   isOpen=!isOpen;
   document.getElementById('chat-win').classList.toggle('open',isOpen);
   if(isOpen){ document.getElementById('fab-pulse').style.display='none'; $inp().focus(); }
+}
+
+function sharePage(){
+  const data = { title: "St Joseph's University, Bengaluru", url: location.href };
+  if(navigator.share){ navigator.share(data).catch(()=>{}); }
+  else{
+    navigator.clipboard.writeText(location.href);
+    alert('Link copied to clipboard!');
+  }
 }
 </script>
 </body>

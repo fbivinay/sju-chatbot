@@ -1,6 +1,9 @@
 .env
 .env.txt
 _env.txt
+gemini keys.txt
+scraped_chunks.json
+scrape_log.txt
 scrape_playwright.py
 crawl_urls.py
 diagnose.py
