@@ -238,80 +238,17 @@ RULES:
 """ + KNOWLEDGE
 
 
-# Common student abbreviations -> how the website actually writes them
-ABBREV = {
-    "bda": "big data analytics",
-    "msc": "m.sc",
-    "mca": "computer applications",
-    "bca": "computer applications",
-    "cs": "computer science",
-    "ai": "artificial intelligence",
-    "ml": "machine learning",
-    "eco": "economics",
-    "psych": "psychology",
-    "biotech": "biotechnology",
-    "micro": "microbiology",
-    "mba": "business administration",
-    "bba": "business administration",
-    "mcom": "commerce",
-    "bcom": "commerce",
-    "msw": "social work",
-    "bsw": "social work",
-    "dept": "department",
-    "fees": "fee",
-}
-
 def search_supabase(question: str) -> str:
-    """Get real crawled content from Supabase relevant to the question."""
+    """Full-text search over real crawled SJU content in Supabase (no embeddings)."""
     if not sb:
         return ""
     try:
-        stop = {"what","when","where","how","is","are","the","a","an","at","in","of",
-                "for","to","do","does","tell","me","about","i","can","will","which",
-                "who","sju","college","university","please","give","yes","more","many","much"}
-        raw = [w.lower().strip("?.,!:;") for w in question.split()
-               if w.lower() not in stop and len(w) > 1]
-        # Expand abbreviations: 'bda' also searches 'big data analytics'
-        words = []
-        for w in raw:
-            if w in ABBREV:
-                words.extend(ABBREV[w].split())
-            if len(w) > 2:
-                words.append(w)
-        # de-duplicate, keep order
-        seen_w = set()
-        words = [w for w in words if not (w in seen_w or seen_w.add(w))]
-        if not words:
+        r = sb.rpc("match_sju_knowledge", {"query": question, "match_count": 6}).execute()
+        rows = r.data or []
+        if not rows:
             return ""
-
-        results = []
-        # 1) try the most specific combined phrase first
-        term = " ".join(words[:4])
-        r = sb.table("sju_knowledge").select("content, page_name") \
-            .ilike("content", f"%{term}%").limit(4).execute()
-        if r.data:
-            results.extend(r.data)
-
-        # 2) if thin, search each keyword individually
-        if len(results) < 3:
-            for w in words[:4]:
-                r = sb.table("sju_knowledge").select("content, page_name") \
-                    .ilike("content", f"%{w}%").limit(3).execute()
-                if r.data:
-                    results.extend(r.data)
-
-        if results:
-            seen = set()
-            chunks = []
-            for row in results:
-                key = row["content"][:80]
-                if key not in seen:
-                    seen.add(key)
-                    page = row.get("page_name", "")
-                    chunks.append(f"[{page}] {row['content'][:600]}")
-                if len(chunks) >= 6:
-                    break
-            return "=== REAL CONTENT FROM SJU WEBSITE (use this first) ===\n" + "\n\n".join(chunks)
+        chunks = [f"[{row.get('page_name', '')}] {row['content'][:600]}" for row in rows]
+        return "=== REAL CONTENT FROM SJU WEBSITE (use this first) ===\n" + "\n\n".join(chunks)
     except Exception as e:
         print(f"Supabase search error: {e}")
     return ""
@@ -332,10 +269,7 @@ async def chat(req: ChatRequest):
     if not q:
         return {"answer": "Please type a question!"}
     if not GEMINI_KEY:
-        return {"answer": "Gemini API key not configured in Railway. Please add GEMINI_API_KEY."}
-
-    extra = search_supabase(q)
-    system = SYSTEM_PROMPT.format(extra=extra)
+        return {"answer": "Gemini API key not configured. Please add GEMINI_API_KEY in Vercel environment variables."}
 
     contents = []
     if req.history:
@@ -348,8 +282,10 @@ async def chat(req: ChatRequest):
 
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
+            extra = search_supabase(q)
+            system = SYSTEM_PROMPT.format(extra=extra)
             resp = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_KEY}",
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_KEY}",
                 headers={"Content-Type": "application/json"},
                 json={
                     "system_instruction": {"parts": [{"text": system}]},
@@ -381,7 +317,7 @@ async def chat(req: ChatRequest):
 def health():
     return {
         "status": "running",
-        "ai": "gemini-2.5-flash",
+        "ai": "gemini-flash-latest",
         "has_builtin_knowledge": True,
         "supabase_extra": sb is not None,
         "gemini_configured": bool(GEMINI_KEY),
