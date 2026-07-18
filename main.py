@@ -226,11 +226,12 @@ Use the SJU knowledge below to answer questions. The knowledge is accurate and c
 RULES:
 1. ALWAYS give a direct, helpful answer using the knowledge below. You have lots of information - use it.
 2. For courses, admissions, placements, hostel, scholarships, sports, facilities - you have full details, so answer confidently.
-3. For exact fees: give the approximate figures from the knowledge, but ALWAYS add that they should confirm exact current fees at admissions.sju.edu.in since fees change yearly.
-4. For very specific things you genuinely don't have (like a specific professor's name or a specific date), point them to the right page or phone number - but still be helpful.
+3. For fees: if the SJU CONTENT above contains a fee table or figures, quote the EXACT amounts (category-wise and year-wise, e.g. Karnataka/Non-Karnataka/NRI). Do NOT invent or round to a vague range. Add one short line that fees may change yearly - confirm at admissions.sju.edu.in.
+4. If the SJU CONTENT above contains names, dates, or details, USE them (e.g. the Dean's or faculty names). Only say you don't have something when it is genuinely absent from the content above - then point to the right page or phone number.
 5. If student says "yes", "tell me more", "go on" - continue the previous topic.
 6. Use bullet points for lists. Keep answers under 250 words. Be friendly and warm.
 7. NEVER just say "I couldn't find that" for common topics - you HAVE the information, use it.
+8. When your answer draws on the SJU CONTENT above, cite its source URL as a Markdown link, e.g. [MSc Big Data Analytics](https://www.sju.edu.in/programmes/msc-in-big-data-analytics).
 
 {extra}
 
@@ -247,8 +248,15 @@ def search_supabase(question: str) -> str:
         rows = r.data or []
         if not rows:
             return ""
-        chunks = [f"[{row.get('page_name', '')}] {row['content'][:600]}" for row in rows]
-        return "=== REAL CONTENT FROM SJU WEBSITE (use this first) ===\n" + "\n\n".join(chunks)
+        chunks = []
+        for row in rows:
+            pg = row.get("page_name", "")
+            url = row.get("source_url", "")
+            # Keep enough text that fee tables / details aren't cut off, and pass the
+            # source URL so the model can link to it.
+            chunks.append(f"[{pg}] (source: {url})\n{row['content'][:2000]}")
+        return ("=== REAL CONTENT FROM SJU WEBSITE (use this first; quote exact figures "
+                "and link the source URL) ===\n" + "\n\n".join(chunks))
     except Exception as e:
         print(f"Supabase search error: {e}")
     return ""
@@ -290,7 +298,10 @@ async def chat(req: ChatRequest):
                 json={
                     "system_instruction": {"parts": [{"text": system}]},
                     "contents": contents,
-                    "generationConfig": {"maxOutputTokens": 500, "temperature": 0.3},
+                    # gemini-flash-latest is a thinking model; without thinkingBudget=0 it
+                    # spends the token budget reasoning and truncates the visible answer.
+                    "generationConfig": {"maxOutputTokens": 800, "temperature": 0.3,
+                                         "thinkingConfig": {"thinkingBudget": 0}},
                 }
             )
             data = resp.json()
