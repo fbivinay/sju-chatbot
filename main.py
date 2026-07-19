@@ -239,12 +239,23 @@ RULES:
 """ + KNOWLEDGE
 
 
+# Informal short-forms students use that never appear verbatim on the real SJU
+# pages (which spell programmes out in full) - full-text search can't match
+# "BDA" to "Big Data Analytics" on its own, so widen the query with the expansion.
+QUERY_ABBREVIATIONS = {
+    "bda": "big data analytics",
+}
+
+
 def search_supabase(question: str) -> str:
     """Full-text search over real crawled SJU content in Supabase (no embeddings)."""
     if not sb:
         return ""
+    words = question.lower().split()
+    expansions = {QUERY_ABBREVIATIONS[w] for w in words if w in QUERY_ABBREVIATIONS}
+    query = question if not expansions else question + " " + " ".join(expansions)
     try:
-        r = sb.rpc("match_sju_knowledge", {"query": question, "match_count": 6}).execute()
+        r = sb.rpc("match_sju_knowledge", {"query": query, "match_count": 6}).execute()
         rows = r.data or []
         if not rows:
             return ""
@@ -288,9 +299,14 @@ async def chat(req: ChatRequest):
                 contents.append({"role": "model", "parts": [{"text": m.content}]})
     contents.append({"role": "user", "parts": [{"text": q}]})
 
+    # Short follow-ups ("fees", "and hostel?") carry no topic on their own -
+    # fold in the previous user turn so search still finds the right programme.
+    prev_user_msg = next((m.content for m in reversed(req.history or []) if m.role == "user"), None)
+    search_query = f"{prev_user_msg} {q}" if prev_user_msg and prev_user_msg != q else q
+
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            extra = search_supabase(q)
+            extra = search_supabase(search_query)
             system = SYSTEM_PROMPT.format(extra=extra)
             resp = await client.post(
                 f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_KEY}",
