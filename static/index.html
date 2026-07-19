@@ -573,6 +573,37 @@ img{max-width:100%}
 // ═══════════════ SJU ADMISSION ASSISTANT ═══════════════
 // State
 const state = { level: null, course: null, history: [], openedLinks: [] };
+
+// Detect which programme a free-typed question is actually about, so the
+// option-card buttons (Programme Info / Fees / ...) point at that programme
+// instead of staying stuck on whatever was last clicked in the dropdown.
+const NAME_ABBREVIATIONS = { bda: "big data analytics" };
+const CORE_STOPWORDS = new Set(["the","and","for","with","bachelor","master","science","commerce",
+  "business","administration","diploma","postgraduate","programme","program","study","studies","degree"]);
+function coreTokens(str){
+  return str.toLowerCase().replace(/[().]/g,"").split(/\s+/).filter(w=>w.length>2 && !CORE_STOPWORDS.has(w));
+}
+function expandAbbrev(text){
+  return text.toLowerCase().split(/\s+/).map(w=>NAME_ABBREVIATIONS[w]||w).join(" ");
+}
+let _allCourses=null;
+function allCourses(){
+  if(!_allCourses) _allCourses=[].concat(...Object.entries(PROGRAMMES).map(([lvl,list])=>list.map(c=>({...c,level:lvl}))));
+  return _allCourses;
+}
+function detectCourse(text){
+  const qTokens=new Set(coreTokens(expandAbbrev(text)));
+  let best=null, bestScore=0;
+  for(const c of allCourses()){
+    const cTokens=coreTokens(c.name);
+    // require every meaningful word of the programme name and at least two of
+    // them, so a stray shared word can't hijack the context - only a real match can
+    if(cTokens.length>=2 && cTokens.every(t=>qTokens.has(t)) && cTokens.length>bestScore){
+      best=c; bestScore=cTokens.length;
+    }
+  }
+  return best;
+}
 let isOpen = false, sdIndex = -1;
 
 // ── Official URLs (DATA: edit per-course URLs here) ──────────────
@@ -855,7 +886,11 @@ async function sendToAI(q){
     state.history.push({role:'user',content:q});
     state.history.push({role:'assistant',content:ans});
     if(state.history.length>20) state.history.splice(0,2);
-    if(state.course) renderOptionCards();   // keep options handy after each answer
+    const detected=detectCourse(q);
+    if(detected && (!state.course || detected.name!==state.course.name)){
+      state.course=detected; state.level=detected.level;
+    }
+    if(state.course) renderOptionCards();   // keep options handy, pointed at the right programme
   }catch(e){ hideTyping(); botMsg('Sorry, something went wrong. Please try again.'); }
   finally{ btn.disabled=false; $inp().focus(); }
 }
