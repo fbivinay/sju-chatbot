@@ -591,18 +591,28 @@ function allCourses(){
   if(!_allCourses) _allCourses=[].concat(...Object.entries(PROGRAMMES).map(([lvl,list])=>list.map(c=>({...c,level:lvl}))));
   return _allCourses;
 }
-function detectCourse(text){
-  const qTokens=new Set(coreTokens(expandAbbrev(text)));
-  let best=null, bestScore=0;
+// Degree words repeat across every programme at a level, so they can never
+// identify a programme on their own - only the subject words can.
+const DEGREE_TOKENS = new Set(["msc","bsc","bca","mca","bba","bcom","mcom","bsw","msw","bvoc","phd",
+  "master","masters","bachelor","bachelors","executive"]);
+function subjectTokens(str){ return coreTokens(str).filter(t=>!DEGREE_TOKENS.has(t)); }
+// Which programmes could this free-typed question be about?
+//   exact - every subject word of the programme name is in the question
+//   loose - shares at least one subject word (question names a subject, not one programme)
+function matchCourses(text){
+  const q=new Set(coreTokens(expandAbbrev(text)));
+  const degrees=[...q].filter(t=>DEGREE_TOKENS.has(t));
+  const exact=[], loose=[];
   for(const c of allCourses()){
-    const cTokens=coreTokens(c.name);
-    // require every meaningful word of the programme name and at least two of
-    // them, so a stray shared word can't hijack the context - only a real match can
-    if(cTokens.length>=2 && cTokens.every(t=>qTokens.has(t)) && cTokens.length>bestScore){
-      best=c; bestScore=cTokens.length;
-    }
+    const cAll=coreTokens(c.name), cSubj=subjectTokens(c.name);
+    if(!cSubj.length) continue;
+    // "msc chemistry" must not pull in the BSc or PhD chemistry programmes
+    if(degrees.length && !degrees.some(d=>cAll.includes(d))) continue;
+    if(!cSubj.some(t=>q.has(t))) continue;
+    loose.push(c);
+    if(cSubj.every(t=>q.has(t))) exact.push(c);
   }
-  return best;
+  return {exact:exact, loose:loose};
 }
 let isOpen = false, sdIndex = -1;
 
@@ -807,7 +817,7 @@ function chooseCourseByName(name){
   if(c) selectCourse(c);
 }
 function selectCourse(c){
-  state.course=c; hideDrop();
+  state.course=c; if(c.level) state.level=c.level; hideDrop();
   $inp().value=''; $inp().placeholder='Ask anything about this programme...';
   usrMsg(c.name);
   // give the AI context for later conversational questions
@@ -821,6 +831,16 @@ function renderOptionCards(){
     `<button class="opt-card" onclick="openOfficial('${o.key}','${o.icon}','${o.label}')"><span class="oc-ic">${o.icon}</span>${o.label}</button>`
   ).join('');
   rawBlock(`<div class="opt-cards">${cards}</div>`);
+}
+// Question named a subject that several programmes share - let the student pick
+// rather than pointing the option cards at a programme they didn't ask about.
+let _choices=[];
+function renderCourseChoices(list){
+  _choices=list;
+  botMsg(`Which programme did you mean?`);
+  rawBlock(`<div class="opt-cards">${list.map((c,i)=>
+    `<button class="opt-card" onclick="selectCourse(_choices[${i}])"><span class="oc-ic">🎓</span>${esc(c.name)}</button>`
+  ).join('')}</div>`);
 }
 
 // ── Official redirection (highest priority feature) ─────────────
@@ -886,9 +906,17 @@ async function sendToAI(q){
     state.history.push({role:'user',content:q});
     state.history.push({role:'assistant',content:ans});
     if(state.history.length>20) state.history.splice(0,2);
-    const detected=detectCourse(q);
-    if(detected && (!state.course || detected.name!==state.course.name)){
-      state.course=detected; state.level=detected.level;
+    const m=matchCourses(q);
+    const hit = m.exact.length===1 ? m.exact[0] : (m.exact.length===0 && m.loose.length===1 ? m.loose[0] : null);
+    const stillCurrent = state.course && m.loose.some(c=>c.name===state.course.name);
+    if(hit){
+      state.course=hit; state.level=hit.level;
+    }else if(m.loose.length>1 && !stillCurrent){
+      // question moved to a different subject but didn't name one programme -
+      // stale option cards here would send the student to the wrong page
+      state.course=null; state.level=null;
+      // ponytail: 6 buttons is a screenful; narrower matching would need real ranking
+      renderCourseChoices((m.exact.length>1?m.exact:m.loose).slice(0,6));
     }
     if(state.course) renderOptionCards();   // keep options handy, pointed at the right programme
   }catch(e){ hideTyping(); botMsg('Sorry, something went wrong. Please try again.'); }
