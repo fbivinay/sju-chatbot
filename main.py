@@ -314,10 +314,12 @@ async def chat(req: ChatRequest):
                 json={
                     "system_instruction": {"parts": [{"text": system}]},
                     "contents": contents,
-                    # gemini-flash-latest is a thinking model; without thinkingBudget=0 it
+                    # gemini-flash-latest is a thinking model; without thinking turned down it
                     # spends the token budget reasoning and truncates the visible answer.
+                    # It now resolves to Gemini 3.x, which rejects the old thinkingBudget
+                    # field with 400 INVALID_ARGUMENT - thinkingLevel "minimal" replaces it.
                     "generationConfig": {"maxOutputTokens": 800, "temperature": 0.3,
-                                         "thinkingConfig": {"thinkingBudget": 0}},
+                                         "thinkingConfig": {"thinkingLevel": "minimal"}},
                 }
             )
             data = resp.json()
