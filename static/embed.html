@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SJU Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Arima:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+/* No zoom here - the chat CSS below is written for the iframe's native 540px
+   box. The demo page scales the whole document, so stacking a second zoom
+   inside the frame would shrink it twice. */
+html,body{height:100%;overflow:hidden}
+body{font-family:'Arima',sans-serif;font-size:19px;line-height:1.5;color:#222;background:#fff}
+h1,h2,h3,h4,h5,h6,button,input{font-family:'Poppins',sans-serif}
+a{text-decoration:none;color:inherit}
+img{max-width:100%}
+/* the floating panel of the demo page becomes the whole document here */
+#chat-win{width:100%;height:100%;background:#fff;display:flex;flex-direction:column}
+.cw-head{background:linear-gradient(135deg,#0a2340,#003580);color:#fff;padding:21px 24px;border-radius:22px 22px 0 0;display:flex;align-items:center;gap:14px;flex-shrink:0}
+.cw-av{width:60px;height:60px;background:#f0c93d;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;color:#0a2340;flex-shrink:0;overflow:hidden}
+.cw-av img,.cav img{width:100%;height:100%;object-fit:cover;object-position:center;border-radius:50%;display:block}
+.cw-info{flex:1}
+.cw-name{font-weight:700;font-size:21px}
+.cw-status{font-size:16px;opacity:.7;margin-top:2px;display:flex;align-items:center;gap:6px}
+.cw-dot{width:10px;height:10px;background:#4ade80;border-radius:50%;display:inline-block}
+.cw-close{background:rgba(255,255,255,.12);border:none;border-radius:50%;width:42px;height:42px;color:#fff;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0}
+.cw-close:hover{background:rgba(255,255,255,.25)}
+
+.cw-chips{padding:12px 18px;background:#f0f4fc;border-bottom:1px solid #dde6f4;display:flex;flex-wrap:wrap;gap:8px;flex-shrink:0}
+.cchip{background:#fff;border:1px solid #0a2340;color:#0a2340;border-radius:26px;padding:7px 17px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
+.cchip:hover{background:#0a2340;color:#fff}
+
+.cw-msgs{flex:1;overflow-y:auto;padding:21px 18px;display:flex;flex-direction:column;gap:15px;background:#f5f7fb;min-height:0}
+.cmsg{display:flex;gap:12px;align-items:flex-end}
+.cmsg.bot{align-self:flex-start;max-width:90%}
+.cmsg.usr{align-self:flex-end;flex-direction:row-reverse;max-width:88%}
+.cbub{padding:15px 21px;border-radius:24px;font-size:19px;font-weight:500;line-height:1.6}
+.cmsg.bot .cbub{background:#fff;color:#1a1a1a;border-bottom-left-radius:6px;border:1px solid #dde6f0;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.cmsg.usr .cbub{background:#0a2340;color:#fff;border-bottom-right-radius:6px}
+.cav{width:42px;height:42px;background:#f0c93d;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#0a2340;flex-shrink:0;overflow:hidden}
+
+@keyframes td{0%,60%,100%{transform:translateY(0);opacity:.3}30%{transform:translateY(-5px);opacity:1}}
+.tdot{width:10px;height:10px;border-radius:50%;background:#0a2340;display:inline-block;animation:td 1.2s ease-in-out infinite;margin:0 3px}
+
+.cw-inp{padding:15px 18px;border-top:1px solid #e4ecf4;display:flex;gap:12px;background:#fff;border-radius:0 0 22px 22px;flex-shrink:0}
+.cw-inp input{flex:1;border:2px solid #dde6f0;border-radius:30px;padding:14px 22px;font-size:19px;font-weight:500;font-family:inherit;outline:none;background:#f5f7fb;color:#1a1a1a;transition:border-color .15s,background .15s}
+.cw-inp input:focus{border-color:#0a2340;background:#fff}
+.csend{width:57px;height:57px;background:#0a2340;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .15s}
+.csend:disabled{opacity:.4;cursor:not-allowed}
+.csend svg{width:24px;height:24px;fill:#fff}
+.cw-foot{text-align:center;font-size:15px;color:#999;padding:6px 0 9px;background:#fff;border-top:1px solid #f0f0f0;border-radius:0 0 22px 22px;flex-shrink:0}
+.cw-foot b{color:#0a2340}
+
+/* ── Admission Assistant components ── */
+.cw-startover{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:20px;padding:6px 17px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s;white-space:nowrap}
+.cw-startover:hover{background:rgba(255,255,255,.3)}
+.lvl-btns{display:flex;gap:15px;margin:9px 0 3px 54px}
+.lvl-btn{flex:1;background:#fff;border:3px solid #0a2340;color:#0a2340;border-radius:18px;padding:21px 15px;font-size:21px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;text-align:center}
+.lvl-btn:hover{background:#0a2340;color:#fff;transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,32,96,.25)}
+.lvl-btn small{display:block;font-size:15px;font-weight:700;opacity:1;color:#c0392b;margin-top:4px}
+.lvl-btn:hover small{color:#f0c93d}
+.opt-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:9px 0 3px 54px}
+.opt-card{background:#fff;border:2px solid #dde6f4;border-radius:15px;padding:17px 15px;font-size:18px;font-weight:600;color:#0a2340;cursor:pointer;font-family:inherit;transition:all .15s;text-align:left;display:flex;align-items:center;gap:10px}
+.opt-card:hover{border-color:#f0c93d;background:#fffbf0;transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.08)}
+.opt-card .oc-ic{font-size:24px}
+.search-wrap{position:relative;flex:1}
+.search-drop{position:absolute;bottom:calc(100% + 9px);left:0;right:0;background:#fff;border:1px solid #dde6f4;border-radius:18px;box-shadow:0 -6px 24px rgba(0,0,0,.14);max-height:330px;overflow-y:auto;display:none;z-index:50}
+.search-drop.show{display:block}
+.sd-item{padding:15px 21px;font-size:21px;font-weight:700;color:#0a2340;cursor:pointer;border-bottom:1px solid #f4f6fa;transition:background .1s}
+.sd-item:last-child{border-bottom:none}
+.sd-item:hover,.sd-item.active{background:#eef3ff;color:#0a2340;font-weight:600}
+.sd-empty{padding:15px 21px;font-size:18px;color:#999}
+.link-card{display:inline-flex;align-items:center;gap:12px;background:#fff;border:2px solid #f0c93d;border-radius:15px;padding:14px 21px;font-size:19px;font-weight:600;color:#0a2340;text-decoration:none;margin-top:9px;transition:all .15s}
+.link-card:hover{background:#fffbf0;box-shadow:0 3px 10px rgba(201,168,76,.3)}
+</style>
+</head>
+<body>
+<div id="chat-win">
+  <div class="cw-head">
+    <div class="cw-av"><img src="/static/logo.jpg" alt="SJU" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div>
+    <div class="cw-info">
+      <div class="cw-name">SJU Assistant</div>
+      <div class="cw-status"><span class="cw-dot"></span> Online</div>
+    </div>
+    <button class="cw-startover" onclick="startOver()">⟳ Start Over</button>
+    <button class="cw-close" onclick="toggleChat()">✕</button>
+  </div>
+
+  <div class="cw-msgs" id="cwMsgs"></div>
+
+  <div class="cw-inp">
+    <div class="search-wrap">
+      <div class="search-drop" id="searchDrop"></div>
+      <input id="cwInput" type="text" placeholder="Ask anything about SJU..." autocomplete="off" style="width:100%"/>
+    </div>
+    <button class="csend" id="cwBtn" onclick="handleSend()">
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+// ═══════════════ SJU ADMISSION ASSISTANT ═══════════════
+// State
+const state = { level: null, course: null, history: [], openedLinks: [] };
+
+// Detect which programme a free-typed question is actually about, so the
+// option-card buttons (Programme Info / Fees / ...) point at that programme
+// instead of staying stuck on whatever was last clicked in the dropdown.
+const NAME_ABBREVIATIONS = { bda: "big data analytics" };
+const CORE_STOPWORDS = new Set(["the","and","for","with","bachelor","master","science","commerce",
+  "business","administration","diploma","postgraduate","programme","program","study","studies","degree"]);
+function coreTokens(str){
+  return str.toLowerCase().replace(/[().]/g,"").split(/\s+/).filter(w=>w.length>2 && !CORE_STOPWORDS.has(w));
+}
+function expandAbbrev(text){
+  return text.toLowerCase().split(/\s+/).map(w=>NAME_ABBREVIATIONS[w]||w).join(" ");
+}
+let _allCourses=null;
+function allCourses(){
+  if(!_allCourses) _allCourses=[].concat(...Object.entries(PROGRAMMES).map(([lvl,list])=>list.map(c=>({...c,level:lvl}))));
+  return _allCourses;
+}
+// Degree words repeat across every programme at a level, so they can never
+// identify a programme on their own - only the subject words can.
+const DEGREE_TOKENS = new Set(["msc","bsc","bca","mca","bba","bcom","mcom","bsw","msw","bvoc","phd",
+  "master","masters","bachelor","bachelors","executive"]);
+function subjectTokens(str){ return coreTokens(str).filter(t=>!DEGREE_TOKENS.has(t)); }
+// Which programmes could this free-typed question be about?
+//   exact - every subject word of the programme name is in the question
+//   loose - shares at least one subject word (question names a subject, not one programme)
+function matchCourses(text){
+  const q=new Set(coreTokens(expandAbbrev(text)));
+  const degrees=[...q].filter(t=>DEGREE_TOKENS.has(t));
+  const exact=[], loose=[];
+  for(const c of allCourses()){
+    const cAll=coreTokens(c.name), cSubj=subjectTokens(c.name);
+    if(!cSubj.length) continue;
+    // "msc chemistry" must not pull in the BSc or PhD chemistry programmes
+    if(degrees.length && !degrees.some(d=>cAll.includes(d))) continue;
+    if(!cSubj.some(t=>q.has(t))) continue;
+    loose.push(c);
+    if(cSubj.every(t=>q.has(t))) exact.push(c);
+  }
+  return {exact:exact, loose:loose};
+}
+let isOpen = false, sdIndex = -1;
+
+// ── Official URLs (DATA: edit per-course URLs here) ──────────────
+// ── Official URL routing (URLs verified from sju.edu.in/admissions/all-programmes) ──
+const SJU        = "https://www.sju.edu.in/";
+const DATES_PAGE = SJU + "important-dates.php";
+const APPLY      = "https://sjuv4.linways.com/v4/adm-applicant/login";
+const PHD_PAGE   = SJU + "admissions/phd-programmes";
+const ALL_PROG   = SJU + "admissions/all-programmes";
+
+// Each programme's official page has section anchors:
+// #eligibility  #fee-structure  #admission (selection)  — verified on BCA page
+function C(name, path){
+  const page = path ? (path.indexOf('http')===0 ? path : SJU + path) : ALL_PROG;
+  return {
+    name: name,
+    info:        page,
+    fees:        page + "#fee-structure",
+    eligibility: page + "#eligibility",
+    selection:   page + "#admission",
+    dates:       DATES_PAGE,
+    apply:       APPLY
+  };
+}
+
+const PROGRAMMES = {
+  UG: [
+    C("B.Com. (Bachelor of Commerce)", "school-of-business/department-of-commerce/bachelor-of-commerce.php"),
+    C("B.Com. Industry Integrated", "school-of-business/department-of-commerce/bachelor-of-commerce-industry-integrated.php"),
+    C("B.Com. International Finance and Accounting", "school-of-business/department-of-commerce/bachelor-of-commerce-international-finance-and-accounting.php"),
+    C("BBA (Bachelor of Business Administration)", "school-of-business/department-of-management/bachelor-of-business-administration.php"),
+    C("BBA Strategic Finance", "school-of-business/department-of-management/bba-in-strategic-finance.php"),
+    C("BBA Branding and Entrepreneurship", "school-of-business/department-of-management/bba-in-branding-and-entrepreneurship.php"),
+    C("BCA (Bachelor of Computer Applications)", "school-of-information-technology/department-of-computer-science/bachelor-of-computer-applications.php"),
+    C("BCA (Data Analytics)", "school-of-information-technology/department-of-advanced-computing/bca-in-data-analytics.php"),
+    C("B.A. Optional English, Journalism & Psychology", "school-of-humanities-and-social-sciences/department-of-psychology-and-counselling/ba-in-optional-english-journalism-and-psychology.php"),
+    C("B.A. Theatre and Performance Studies, Optional English & Psychology", "school-of-humanities-and-social-sciences/department-of-psychology-and-counselling/ba-in-theatre-and-performance-studies-optional-english-and-psychology.php"),
+    C("B.A. Industrial Relations, Economics & Sociology", "school-of-humanities-and-social-sciences/department-of-economics/ba-industrial-relations-economics-sociology.php"),
+    C("B.A. History, Economics & Political Science", "school-of-humanities-and-social-sciences/department-of-political-science/ba-in-history-economics-and-political_science.php"),
+    C("B.A. Communicative English, Political Science & Economics", "school-of-humanities-and-social-sciences/department-of-political-science/ba-communicative-english-political-science-economics.php"),
+    C("B.A. Economics, Political Science & Sociology", "school-of-humanities-and-social-sciences/department-of-economics/ba-in-economics-political-science-and-sociology.php"),
+    C("B.A. History, Political Science & Sociology", "school-of-humanities-and-social-sciences/department-of-history/ba-in-history-political-science-and-sociology.php"),
+    C("B.A. International Relations and Peace Studies, Journalism & Public Policy", "school-of-humanities-and-social-sciences/department-of-international-relations-peace-and-public-policy/ba-international-relations-and-peace-studies-journalism-and-public-policy.php"),
+    C("B.A. Journalism, Political Science & Sociology", "school-of-humanities-and-social-sciences/department-of-political-science/ba-in-journalism-political-science-and-sociology.php"),
+    C("B.A. Journalism, Economics & Psychology", "school-of-humanities-and-social-sciences/department-of-psychology-and-counselling/ba-in-journalism-economics-and-psychology.php"),
+    C("B.A. Visual Communication", "school-of-communication-media-studies/department-of-communication-media-studies/ba-in-visual-communication.php"),
+    C("B.Voc. Digital Media and Animation", "school-of-communication-media-studies/department-of-communication-media-studies/bvoc-in-digital-media-animation.php"),
+    C("B.Voc. Visual Media and Film-Making", "school-of-communication-media-studies/department-of-communication-media-studies/bvoc-in-visual-media-film-making.php"),
+    C("BSW (Bachelor of Social Work)", "school-of-social-work/department-of-social-work/bachelor-of-social-work.php"),
+    C("B.Sc. Biochemistry, Biology & Biotechnology", "school-of-chemical-sciences/department-of-biochemistry/bsc-in-biochemistry-biology-and-biotechnology.php"),
+    C("B.Sc. Biochemistry, Biotechnology & Zoology", "school-of-chemical-sciences/department-of-biochemistry/bsc-in-biochemistry-biotechnology-and-zoology.php"),
+    C("B.Sc. Biochemistry, Microbiology & Zoology", "school-of-chemical-sciences/department-of-biochemistry/bsc-in-biochemistry-microbiology-and-zoology.php"),
+    C("B.Sc. Biochemistry, Biology & Microbiology", "school-of-chemical-sciences/department-of-biochemistry/bsc-in-biochemistry-biology-and-microbiology.php"),
+    C("B.Sc. Biochemistry, Botany & Biotechnology", "school-of-chemical-sciences/department-of-biochemistry/bsc-in-biochemistry-botany-and-biotechnology.php"),
+    C("B.Sc. Chemistry, Environmental Science & Biology", "school-of-chemical-sciences/department-of-chemistry/bsc-in-chemistry-environmental_science-and-biology.php"),
+    C("B.Sc. Botany, Environmental Science & Zoology", "school-of-life-sciences/department-of-botany/bsc-in-botany-environmental-science-and-zoology.php"),
+    C("B.Sc. Chemistry, Microbiology & Biology", "school-of-chemical-sciences/department-of-chemistry/bsc-in-chemistry-microbiology-and-biology.php"),
+    C("B.Sc. Chemistry, Zoology & Biotechnology", "school-of-chemical-sciences/department-of-chemistry/bsc-in-chemistry-zoology-and-biotechnology.php"),
+    C("B.Sc. Chemistry, Biotechnology & Biology", "school-of-chemical-sciences/department-of-chemistry/bsc-in-chemistry-biotechnology-and-biology.php"),
+    C("B.Sc. Chemistry, Microbiology & Biotechnology", "school-of-chemical-sciences/department-of-chemistry/bsc-in-chemistry-microbiology-and-biotechnology.php"),
+    C("B.Sc. Chemistry, Botany & Zoology", "school-of-chemical-sciences/department-of-chemistry/bsc-in-chemistry-botany-and-zoology.php"),
+    C("B.Sc. Computer Science, Mathematics & Statistics", "school-of-physical-sciences/department-of-statistics/bsc-in-computer-science-mathematics-statistics.php"),
+    C("B.Sc. Physics, Mathematics & Computer Science", "school-of-physical-sciences/department-of-physics/bsc-in-physics-mathematics-computer-science.php"),
+    C("B.Sc. Economics, Mathematics & Statistics", "school-of-humanities-and-social-sciences/department-of-economics/bsc-in-economics-mathematics-and-statistics.php"),
+    C("B.Sc. Physics, Electronics & Mathematics", "school-of-physical-sciences/department-of-physics/bsc-in-physics-electronics-mathematics.php"),
+    C("B.Sc. Physics, Chemistry & Mathematics", "school-of-physical-sciences/department-of-physics/bsc-in-physics-chemistry-and-mathematics.php"),
+    C("B.Sc. Mathematics, Electronics & Computer Science", "programmes/bsc-in-mathematics-electronics-computer-science"),
+  ],
+  PG: [
+    C("M.Sc. Big Data Analytics", "school-of-information-technology/department-of-advanced-computing/msc-in-big-data-analytics.php"),
+    C("M.Sc. Computer Science", "school-of-information-technology/department-of-computer-science/msc-in-computer-science.php"),
+    C("M.Sc. Cyber Security and Artificial Intelligence", "school-of-information-technology/department-of-computer-science/msc-in-cyber-security-artificial-intelligence.php"),
+    C("MCA (Master of Computer Applications)", "school-of-information-technology/department-of-computer-science/master-of-computer-applications.php"),
+    C("M.Sc. Analytical Chemistry", "school-of-chemical-sciences/department-of-chemistry/msc-in-analytical-chemistry.php"),
+    C("M.Sc. Organic Chemistry", "school-of-chemical-sciences/department-of-chemistry/msc-in-organic-chemistry.php"),
+    C("M.Sc. Biochemistry", "school-of-chemical-sciences/department-of-biochemistry/msc-in-biochemistry.php"),
+    C("M.Sc. Counselling Psychology", "school-of-humanities-and-social-sciences/department-of-psychology-and-counselling/master-of-science-in-counselling-psychology.php"),
+    C("M.Sc. Biotechnology", "school-of-life-sciences/department-of-biotechnology/msc-in-biotechnology.php"),
+    C("M.Sc. Environmental Science and Sustainability", "school-of-life-sciences/department-of-environmental-science/msc-in-environmental-science-and-sustainability.php"),
+    C("M.Sc. Food Science and Technology", "school-of-life-sciences/department-of-food-science-and-technology/msc-in-food-science-and-technology.php"),
+    C("M.Sc. Microbiology", "school-of-life-sciences/department-of-microbiology/msc-in-microbiology.php"),
+    C("M.Sc. Zoology", "school-of-life-sciences/department-of-zoology/msc-in-zoology.php"),
+    C("M.Sc. Mathematics", "school-of-physical-sciences/department-of-mathematics/master-of-science-in-mathematics.php"),
+    C("M.Sc. Physics", "school-of-physical-sciences/department-of-physics/master-of-science-in-physics.php"),
+    C("M.Sc. Statistics", "school-of-physical-sciences/department-of-statistics/master-of-science-in-statistics.php"),
+    C("M.Com (Master of Commerce)", "school-of-business/department-of-commerce/master-of-commerce.php"),
+    C("M.A. Economics", "school-of-humanities-and-social-sciences/department-of-economics/master-of-arts-in-economics.php"),
+    C("M.A. English", "school-of-languages-and-literatures/department-of-english/master-of-arts-in-english.php"),
+    C("M.A. Political Science", "school-of-humanities-and-social-sciences/department-of-political-science/master-of-arts-in-political-science.php"),
+    C("M.A. Advertising and Public Relations", "school-of-communication-media-studies/department-of-communication-media-studies/ma-in-advertising-public-relations.php"),
+    C("M.A. Journalism and Mass Communication", "school-of-communication-media-studies/department-of-communication-media-studies/ma-in-journalism-mass-communication.php"),
+    C("M.S.W (Master of Social Work)", "school-of-social-work/department-of-social-work/master-of-social-work.php"),
+  ],
+  PGD: [
+    C("Postgraduate Diploma in Financial Management", "school-of-business/department-of-commerce/pg-diploma-in-financial-management.php"),
+    C("Postgraduate Diploma in Human Resource Management", "school-of-business/department-of-management/post-graduation-diploma-in-human-resource-management.php"),
+    C("Executive Diploma in Digital Media Communication", "school-of-communication-media-studies/department-of-communication-media-studies/executive-diploma-digital-media-communications.php"),
+    C("Postgraduate Diploma in Cyber Security", "school-of-information-technology/department-of-advanced-computing/pg-diploma-in-cyber-security.php"),
+    C("Postgraduate Diploma in Data Analytics", "school-of-information-technology/department-of-advanced-computing/pg-diploma-in-data-analytics.php"),
+  ],
+  PHD: [
+    C("PhD in Commerce", "school-of-business/department-of-commerce/phd-in-commerce"),
+    C("PhD in Chemistry", "school-of-chemical-sciences/department-of-chemistry/phd-in-chemistry"),
+    C("PhD in Economics", "school-of-humanities-and-social-sciences/department-of-economics/phd-in-economics"),
+    C("PhD in Political Science", "programmes/phd-in-political-science"),
+    C("PhD in Kannada", "school-of-languages-and-literatures/department-of-kannada/phd-in-kannada"),
+    C("PhD in Biotechnology", "school-of-life-sciences/department-of-biotechnology/phd-in-biotechnology"),
+    C("PhD in Botany", "school-of-life-sciences/department-of-botany/phd-in-botany"),
+    C("PhD in Microbiology", "school-of-life-sciences/department-of-microbiology/phd-in-microbiology"),
+    C("PhD in Zoology", "school-of-life-sciences/department-of-zoology/phd-in-zoology"),
+    C("PhD in Mathematics", "school-of-physical-sciences/department-of-mathematics/phd-in-mathematics"),
+    C("PhD in Physics", "school-of-physical-sciences/department-of-physics/phd-in-physics"),
+    C("PhD in Computer Science", "programmes/phd-in-computer-science"),
+    C("PhD in Mass Communication", "programmes/phd-in-mass-communication"),
+  ]
+};
+
+const OPTION_CARDS = [
+  { icon:"📘", label:"Programme Info",    key:"info" },
+  { icon:"💰", label:"Fees",              key:"fees" },
+  { icon:"✅", label:"Eligibility",       key:"eligibility" },
+  { icon:"📅", label:"Important Dates",   key:"dates" },
+  { icon:"📝", label:"How to Apply",      key:"apply" },
+  { icon:"🎯", label:"Selection Process", key:"selection" },
+];
+
+// ── UI helpers ───────────────────────────────────────────────────
+const $msgs = () => document.getElementById('cwMsgs');
+const $inp  = () => document.getElementById('cwInput');
+const $drop = () => document.getElementById('searchDrop');
+
+function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function botMsg(html){
+  const d=document.createElement('div'); d.className='cmsg bot';
+  d.innerHTML=`<div class="cav"><img src="/static/logo.jpg" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div><div class="cbub">${html}</div>`;
+  $msgs().appendChild(d); scrollDown();
+}
+function usrMsg(text){
+  const d=document.createElement('div'); d.className='cmsg usr';
+  d.innerHTML=`<div class="cbub">${esc(text)}</div>`;
+  $msgs().appendChild(d); scrollDown();
+}
+function rawBlock(html){
+  const d=document.createElement('div'); d.innerHTML=html;
+  $msgs().appendChild(d.firstElementChild || d); scrollDown();
+}
+function scrollDown(){ const b=$msgs(); b.scrollTop=b.scrollHeight; }
+function showTyping(){
+  const d=document.createElement('div'); d.className='cmsg bot'; d.id='cwTyping';
+  d.innerHTML=`<div class="cav"><img src="/static/logo.jpg" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div><div class="cbub"><span class="tdot" style="animation-delay:0s"></span><span class="tdot" style="animation-delay:.2s"></span><span class="tdot" style="animation-delay:.4s"></span></div>`;
+  $msgs().appendChild(d); scrollDown();
+}
+function hideTyping(){ document.getElementById('cwTyping')?.remove(); }
+
+// ── Welcome / Start Over ─────────────────────────────────────────
+function startOver(){
+  state.level=null; state.course=null; state.history=[]; state.openedLinks=[];
+  $msgs().innerHTML=''; hideDrop();
+  $inp().value=''; $inp().placeholder='Ask anything about SJU...';
+  renderWelcome();
+}
+function renderWelcome(){
+  botMsg(`Hi 👋 Welcome to the <strong>SJU Assistant</strong>!<br><br>Choose a programme level, or open any official page below:`);
+  rawBlock(`<div class="lvl-btns" style="flex-wrap:wrap">
+    <button class="lvl-btn" style="flex-basis:47%" onclick="pickLevel('UG')">🎓 Undergraduate<small>BCA · BSc · BBA · BCom · BA</small></button>
+    <button class="lvl-btn" style="flex-basis:47%" onclick="pickLevel('PG')">📚 Postgraduate<small>MSc · MCA · MBA · MA · MSW</small></button>
+    <button class="lvl-btn" style="flex-basis:47%" onclick="pickLevel('PGD')">📜 PG Diploma<small>Data Science · Cyber Security · etc</small></button>
+    <button class="lvl-btn" style="flex-basis:47%" onclick="pickLevel('PHD')">🔬 PhD Programmes<small>Research degrees</small></button>
+  </div>`);
+  renderGlobalActions();
+  $msgs().scrollTop = 0;
+}
+const LEVEL_NAMES = { UG:"Undergraduate", PG:"Postgraduate", PGD:"PG Diploma", PHD:"PhD" };
+function pickLevel(level){
+  state.level=level; state.course=null;
+  const lname=LEVEL_NAMES[level]||level;
+  usrMsg(lname);
+  botMsg(`Great! Please <strong>search or select</strong> the ${lname} programme you're interested in. 🔍<br><span style="font-size:14px;font-weight:700;opacity:.7">Start typing below — e.g. "data", "computer", "psych"...</span>`);
+  $inp().placeholder=`Search ${lname} programmes...`;
+  $inp().focus();
+  showDrop(PROGRAMMES[level]);
+}
+
+// ── Course search dropdown ───────────────────────────────────────
+function showDrop(list){
+  const dd=$drop(); sdIndex=-1;
+  if(!list.length){ dd.innerHTML=`<div class="sd-empty">No matching programme — press Enter to ask the AI instead</div>`; }
+  else dd.innerHTML=list.map((c,i)=>`<div class="sd-item" data-name="${esc(c.name)}" onclick="chooseCourseByName(this.dataset.name)">${esc(c.name)}</div>`).join('');
+  dd.classList.add('show');
+}
+function hideDrop(){ $drop().classList.remove('show'); sdIndex=-1; }
+function filterCourses(q){
+  const list=PROGRAMMES[state.level]||[];
+  if(!q) return list;
+  q=q.toLowerCase();
+  return list.filter(c=>c.name.toLowerCase().includes(q));
+}
+function chooseCourseByName(name){
+  const c=(PROGRAMMES[state.level]||[]).find(x=>x.name===name);
+  if(c) selectCourse(c);
+}
+function selectCourse(c){
+  state.course=c; if(c.level) state.level=c.level; hideDrop();
+  $inp().value=''; $inp().placeholder='Ask anything about this programme...';
+  usrMsg(c.name);
+  // give the AI context for later conversational questions
+  state.history.push({role:'user',content:`I'm interested in the ${c.name} programme at SJU.`});
+  state.history.push({role:'assistant',content:`Great choice! I can help you with ${c.name}. What would you like to know?`});
+  botMsg(`<strong>${esc(c.name)}</strong> — great choice! 🎉<br>What would you like to know? Click an option below, or type any question.`);
+  renderOptionCards();
+}
+function renderOptionCards(){
+  const cards=OPTION_CARDS.map(o=>
+    `<button class="opt-card" onclick="openOfficial('${o.key}','${o.icon}','${o.label}')"><span class="oc-ic">${o.icon}</span>${o.label}</button>`
+  ).join('');
+  rawBlock(`<div class="opt-cards">${cards}</div>`);
+}
+// Question named a subject that several programmes share - let the student pick
+// rather than pointing the option cards at a programme they didn't ask about.
+let _choices=[];
+function renderCourseChoices(list){
+  _choices=list;
+  botMsg(`Which programme did you mean?`);
+  rawBlock(`<div class="opt-cards">${list.map((c,i)=>
+    `<button class="opt-card" onclick="selectCourse(_choices[${i}])"><span class="oc-ic">🎓</span>${esc(c.name)}</button>`
+  ).join('')}</div>`);
+}
+
+// ── Official redirection (highest priority feature) ─────────────
+function openOfficial(key, icon, label){
+  const c=state.course; if(!c) return;
+  const url=c[key];
+  usrMsg(label);
+  state.openedLinks.push(url);
+  botMsg(`<a class="link-card" href="${url}" target="_blank" rel="noopener">${icon} ${esc(label)} — official page ↗</a>`);
+  window.open(url,'_blank');
+}
+
+// ── Global quick actions (official pages, no AI) ─────────────────
+const GLOBAL_ACTIONS = [
+  { icon:"🎓", label:"Admissions Open 2026", url:"https://www.sju.edu.in/admissions/admissions" },
+  { icon:"📋", label:"Application Status",   url:"https://sjuv4.linways.com/v4/adm-applicant/login" },
+  { icon:"🏠", label:"Hostel",               url:"https://www.sju.edu.in/services/hostel/university-hostel" },
+  { icon:"💰", label:"Scholarships",         url:"https://www.sju.edu.in/student-support/scholarships_page" },
+  { icon:"💼", label:"Placements",           url:"https://www.sju.edu.in/placements/about-placements" },
+  { icon:"📖", label:"Certificate Courses",  url:"https://www.sju.edu.in/services/certificate-courses" },
+  { icon:"📞", label:"Contact University",   url:"https://www.sju.edu.in/about/contact-us" },
+];
+function renderGlobalActions(){
+  const cards=GLOBAL_ACTIONS.map((g,i)=>
+    `<button class="opt-card" onclick="openGlobal(${i})"><span class="oc-ic">${g.icon}</span>${g.label}</button>`
+  ).join('');
+  rawBlock(`<div class="opt-cards">${cards}</div>`);
+}
+function openGlobal(i){
+  const g=GLOBAL_ACTIONS[i]; if(!g) return;
+  usrMsg(g.label);
+  state.openedLinks.push(g.url);
+  botMsg(`<a class="link-card" href="${g.url}" target="_blank" rel="noopener">${g.icon} ${esc(g.label)} — official page ↗</a>`);
+  window.open(g.url,'_blank');
+}
+
+// ── Send handling: search mode vs AI mode ────────────────────────
+function handleSend(){
+  const q=$inp().value.trim();
+  if(!q) return;
+  // In course-search mode: Enter selects highlighted or single match
+  if(state.level && !state.course){
+    const matches=filterCourses(q);
+    const items=$drop().querySelectorAll('.sd-item');
+    if(sdIndex>=0 && items[sdIndex]){ chooseCourseByName(items[sdIndex].dataset.name); return; }
+    if(matches.length===1){ selectCourse(matches[0]); return; }
+    if(matches.length>1){ showDrop(matches); return; }
+    // no match → fall through to AI
+  }
+  sendToAI(q);
+}
+
+async function sendToAI(q){
+  const btn=document.getElementById('cwBtn');
+  $inp().value=''; hideDrop(); btn.disabled=true;
+  usrMsg(q); showTyping();
+  try{
+    const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({question:q,history:state.history})});
+    const data=await r.json(); hideTyping();
+    const ans=(data.answer||'Sorry, something went wrong.');
+    botMsg(esc(ans).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>'));
+    state.history.push({role:'user',content:q});
+    state.history.push({role:'assistant',content:ans});
+    if(state.history.length>20) state.history.splice(0,2);
+    const m=matchCourses(q);
+    const hit = m.exact.length===1 ? m.exact[0] : (m.exact.length===0 && m.loose.length===1 ? m.loose[0] : null);
+    const stillCurrent = state.course && m.loose.some(c=>c.name===state.course.name);
+    if(hit){
+      state.course=hit; state.level=hit.level;
+    }else if(m.loose.length>1 && !stillCurrent){
+      // question moved to a different subject but didn't name one programme -
+      // stale option cards here would send the student to the wrong page
+      state.course=null; state.level=null;
+      // ponytail: 6 buttons is a screenful; narrower matching would need real ranking
+      renderCourseChoices((m.exact.length>1?m.exact:m.loose).slice(0,6));
+    }
+    if(state.course) renderOptionCards();   // keep options handy, pointed at the right programme
+  }catch(e){ hideTyping(); botMsg('Sorry, something went wrong. Please try again.'); }
+  finally{ btn.disabled=false; $inp().focus(); }
+}
+
+// ── Input events: live search, keyboard nav, Enter to send ───────
+document.addEventListener('DOMContentLoaded',function(){
+  renderWelcome();
+  const inp=$inp();
+  inp.addEventListener('input',function(){
+    if(state.level && !state.course) showDrop(filterCourses(inp.value.trim()));
+  });
+  inp.addEventListener('focus',function(){
+    if(state.level && !state.course) showDrop(filterCourses(inp.value.trim()));
+  });
+  inp.addEventListener('keydown',function(e){
+    const items=$drop().querySelectorAll('.sd-item');
+    const dropOpen=$drop().classList.contains('show') && items.length;
+    if(dropOpen && e.key==='ArrowDown'){ e.preventDefault(); sdIndex=Math.min(sdIndex+1,items.length-1); highlight(items); return; }
+    if(dropOpen && e.key==='ArrowUp'){ e.preventDefault(); sdIndex=Math.max(sdIndex-1,0); highlight(items); return; }
+    if(e.key==='Escape'){ hideDrop(); return; }
+    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }
+  });
+  document.addEventListener('click',function(e){
+    if(!e.target.closest('.search-wrap') && !e.target.closest('.lvl-btn')) hideDrop();
+  });
+});
+function highlight(items){
+  items.forEach((el,i)=>el.classList.toggle('active',i===sdIndex));
+  if(items[sdIndex]) items[sdIndex].scrollIntoView({block:'nearest'});
+}
+// Hosted in an iframe on the university site - the close button belongs to the
+// launcher, so hand it back to the parent page instead of hiding ourselves.
+function toggleChat(){ parent.postMessage('sju-chat-close','*'); }
+</script>
+</body>
+</html>

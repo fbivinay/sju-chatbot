@@ -44,7 +44,8 @@ full-text search, so there are no embedding API calls and no vector database.
 - **Backend:** FastAPI + Python (Vercel Python serverless)
 - **AI:** Google Gemini `gemini-flash-latest` (free tier)
 - **Knowledge base:** Supabase (Postgres) full-text search
-- **Frontend:** single `static/index.html` — no framework
+- **Frontend:** plain HTML/JS, no framework — `static/embed.html` (chat UI),
+  `static/widget.js` (one-tag embed loader), `static/index.html` (demo site)
 - **Hosting:** Vercel
 
 ---
@@ -70,6 +71,39 @@ If Supabase vars are missing, the bot falls back to built-in knowledge only.
    `SUPABASE_URL` / `SUPABASE_KEY` for the knowledge base).
 4. Redeploy so the env vars take effect. You get a URL like
    `sju-chatbot.vercel.app`.
+
+---
+
+## Embedding the chatbot in the university website
+
+The university does **not** host the bot. It stays on Vercel; their site loads
+it with one tag placed just before `</body>` on any page (PHP, WordPress,
+plain HTML — it makes no difference):
+
+```html
+<script src="https://sju-chatbot.vercel.app/static/widget.js" defer></script>
+```
+
+That is the whole integration. `widget.js` adds a floating button and opens
+`static/embed.html` in an iframe, so:
+
+- **No CSS or JavaScript conflicts.** The chat UI renders in its own document,
+  isolated from the university's stylesheets, jQuery version, and page scripts.
+- **No API keys on their server.** `GEMINI_API_KEY` stays in Vercel; the browser
+  only ever talks to this app.
+- **Updates need no action from them.** Fixes ship on redeploy — the tag stays.
+- **Nothing to install.** No npm, no build step, no server changes.
+
+To put the widget on every page at once, add the tag to the site's shared
+footer include (e.g. `footer.php`) rather than to each page.
+
+**Before going live**, restrict who may frame the app by returning
+`Content-Security-Policy: frame-ancestors https://*.sju.edu.in` from
+`main.py`; otherwise any site can embed the widget and spend the Gemini quota.
+
+`static/embed.html` is the chat UI itself, and `static/index.html` (the demo
+site clone) loads it through the very same `widget.js` — one copy of the chat
+code, so the demo can never drift from what the university runs.
 
 ---
 
@@ -100,9 +134,11 @@ table, and re-uploads. Re-run it whenever the site changes.
 
 | Method | Path      | Purpose                            |
 |--------|-----------|------------------------------------|
-| GET    | `/`       | Serves the website + chat widget   |
-| POST   | `/chat`   | `{ question, history }` → `{ answer }` |
-| GET    | `/health` | Status / config check              |
+| GET    | `/`                  | Demo site clone, loads the widget       |
+| GET    | `/static/widget.js`  | Embed loader for the university site    |
+| GET    | `/static/embed.html` | The chat UI itself (runs in the iframe) |
+| POST   | `/chat`              | `{ question, history }` → `{ answer }`  |
+| GET    | `/health`            | Status / config check                   |
 
 ---
 
