@@ -1,15 +1,18 @@
 """
-SJU Chatbot - RELIABLE VERSION
+SJU Chatbot
 Strong built-in knowledge that ALWAYS answers common questions.
 Also checks Supabase for extra info if available.
-Uses Gemini 2.5 Flash (free tier), falling back to Flash-Lite.
+Answers stream from Gemini, rotating across free-tier models as limits fill up.
 """
+import asyncio
+import json
 import os
+import time
 import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -273,14 +276,146 @@ def search_supabase(question: str) -> str:
     return ""
 
 
-# Pinned, not "-latest": the -latest aliases move to new models without notice, which
-# broke this bot twice (thinking params rejected, 20 requests/day free quota).
-# Thinking is turned down so the model doesn't spend the output budget reasoning;
-# 2.5 takes thinkingBudget, 3.x takes thinkingLevel.
-GEMINI_MODELS = [
-    ("gemini-2.5-flash", {"thinkingBudget": 0}),
-    ("gemini-flash-lite-latest", {"thinkingLevel": "low"}),
+# ════════════════════════════════════════════════════════════════════════════
+# GEMINI MODEL ROTATION
+# ════════════════════════════════════════════════════════════════════════════
+# Every free-tier model has its own quota, so rotating through several multiplies
+# capacity. The limits are this key's free tier (AI Studio > Rate limits, Oct 2026);
+# update them here if Google changes them.
+#
+# Order = fastest first: the first six start answering in ~1-2s. The last two reject
+# thinkingLevel "minimal", and "low" adds ~8s before the first word.
+# Left out: gemini-2.5-flash / 2.5-flash-lite (404 "no longer available to new
+# users") and gemma-4-31b-it (17-30s before the first word).
+# "wait" = seconds to wait for the first word before moving on to the next model.
+#
+#  model                     RPM     RPD      TPM  wait  thinkingLevel
+MODELS = [
+    ("gemini-3.6-flash",        5,     20, 250_000,   6, "minimal"),
+    ("gemini-3-flash-preview",  5,     20, 250_000,   6, "minimal"),
+    ("gemini-3.5-flash",        5,     20, 250_000,   6, "minimal"),
+    ("gemini-3.5-flash-lite",  15,    500, 250_000,   6, "minimal"),
+    ("gemini-3.1-flash-lite",  15,    500, 250_000,   6, "minimal"),
+    ("gemma-4-26b-a4b-it",     30, 14_400,  16_000,   6, "minimal"),
+    ("gemini-3.8-flash",        5,     20, 250_000,  15, "low"),
+    ("gemini-3.7-flash",        5,     20, 250_000,  15, "low"),
 ]
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{}:streamGenerateContent?alt=sse"
+BUSY_MSG = ("Lots of students are asking questions right now - please try again in a minute, "
+            "or call SJU at 080-2227-4079.")
+
+# Usage is tracked in memory so a request goes straight to a model with room left,
+# instead of finding out from a 429. Each Vercel instance keeps its own counts, so
+# when several run at once Google can still say no - the 429 handling covers that.
+_recent = {m[0]: [] for m in MODELS}        # (time, tokens) sent in the last 60s
+_today = {m[0]: 0 for m in MODELS}          # requests since the daily reset
+_skip_until = {m[0]: 0.0 for m in MODELS}   # time before which a model isn't tried
+_quota_day = 0
+
+# Google resets daily quotas at midnight Pacific: 08:00 UTC, or 07:00 UTC during
+# daylight saving. Rolling over at 08:00 year-round means a model can look used up
+# for an hour after it actually reset - never the other way round.
+DAY_START = 8 * 3600
+
+
+def _roll_day(now: float):
+    global _quota_day
+    day = int((now - DAY_START) // 86400)
+    if day != _quota_day:
+        _quota_day = day
+        for model in _today:
+            _today[model] = 0
+
+
+def _pick(tokens: int, tried: set):
+    """Reserve the first model with room under all of its limits."""
+    now = time.time()
+    _roll_day(now)
+    for model, rpm, rpd, tpm, wait, thinking in MODELS:
+        if model in tried or _skip_until[model] > now:
+            continue
+        recent = _recent[model] = [(t, n) for t, n in _recent[model] if now - t < 60]
+        if len(recent) < rpm and _today[model] < rpd and sum(n for _, n in recent) + tokens <= tpm:
+            recent.append((now, tokens))
+            _today[model] += 1
+            return model, wait, thinking
+    return None
+
+
+def _skip(model: str, seconds: float, why: str):
+    _skip_until[model] = time.time() + seconds
+    print(f"Gemini {model}: {why} - skipping it for {seconds:.0f}s")
+
+
+async def gemini_stream(body: dict):
+    """Stream the answer from the first model that can take this request."""
+    tokens = len(json.dumps(body)) // 3   # measured ~3.6 chars per token; errs high
+    deadline = time.monotonic() + 30
+    tried, rejected = set(), []
+    async with httpx.AsyncClient() as client:
+        while pick := _pick(tokens, tried):
+            model, wait, thinking = pick
+            tried.add(model)
+            left = deadline - time.monotonic()
+            if left < 2:
+                print("Gemini: out of time before any model answered")
+                break
+            payload = {**body, "generationConfig": {"maxOutputTokens": 800, "temperature": 0.3,
+                                                    "thinkingConfig": {"thinkingLevel": thinking}}}
+            started = time.monotonic()
+            answered = False
+            try:
+                # Key in a header, not the URL - httpx logs request URLs to Vercel logs.
+                async with client.stream("POST", GEMINI_URL.format(model), json=payload,
+                                         headers={"x-goog-api-key": GEMINI_KEY},
+                                         timeout=httpx.Timeout(min(wait, left), connect=3.0)) as resp:
+                    if resp.status_code != 200:
+                        err = (await resp.aread()).decode(errors="replace")
+                        msg = f"HTTP {resp.status_code} {err[:300]}"
+                        if resp.status_code == 429:
+                            now = time.time()
+                            if "PerDay" in err:
+                                next_reset = (int((now - DAY_START) // 86400) + 1) * 86400 + DAY_START
+                                _skip(model, next_reset - now, "daily quota used up")
+                            else:
+                                _skip(model, 60, "per-minute limit hit")
+                        elif resp.status_code == 404:   # model withdrawn or renamed
+                            _skip(model, 3600, msg)
+                        elif resp.status_code in (400, 403):
+                            # Could be this model (e.g. a thinking level it no longer
+                            # accepts) or this request; only bench the model if another
+                            # model then answers the same request.
+                            print(f"Gemini {model}: {msg}")
+                            rejected.append(model)
+                        else:                           # 5xx: overloaded
+                            _skip(model, 20, msg)
+                        continue
+                    async for line in resp.aiter_lines():
+                        if not line.startswith("data: "):
+                            continue
+                        chunk = json.loads(line[6:])
+                        if "error" in chunk:
+                            print(f"Gemini {model}: error mid-stream {chunk['error']}")
+                            break
+                        for part in (chunk.get("candidates") or [{}])[0].get("content", {}).get("parts", []):
+                            if part.get("text") and not part.get("thought"):
+                                if not answered:
+                                    print(f"Gemini {model}: first words after {time.monotonic() - started:.1f}s")
+                                answered = True
+                                yield part["text"]
+            except httpx.HTTPError as e:   # timed out or connection dropped
+                if answered:
+                    print(f"Gemini {model}: stream broke - {type(e).__name__}")
+                    yield "\n\n(The connection dropped - please ask again.)"
+                    return
+                _skip(model, 20, f"no answer - {type(e).__name__}")
+                continue
+            if answered:
+                for m in rejected:
+                    _skip(m, 600, "rejected a request another model answered")
+                return
+            print(f"Gemini {model}: empty answer")
+    yield BUSY_MSG
 
 
 class Message(BaseModel):
@@ -292,84 +427,73 @@ class ChatRequest(BaseModel):
     history: Optional[List[Message]] = []
 
 
-@app.post("/chat")
-async def chat(req: ChatRequest):
-    q = req.question.strip()
+async def answer_stream(req: ChatRequest):
+    q = req.question.strip()[:2000]
     if not q:
-        return {"answer": "Please type a question!"}
+        yield "Please type a question!"
+        return
     if not GEMINI_KEY:
-        return {"answer": "Gemini API key not configured. Please add GEMINI_API_KEY in Vercel environment variables."}
+        yield "Gemini API key not configured. Please add GEMINI_API_KEY in Vercel environment variables."
+        return
 
-    contents = []
-    if req.history:
-        for m in req.history[-12:]:
-            if m.role == "user":
-                contents.append({"role": "user", "parts": [{"text": m.content}]})
-            elif m.role == "assistant":
-                contents.append({"role": "model", "parts": [{"text": m.content}]})
+    history = [m for m in (req.history or [])[-12:] if m.content.strip()]
+    contents = [{"role": "user" if m.role == "user" else "model", "parts": [{"text": m.content[:4000]}]}
+                for m in history if m.role in ("user", "assistant")]
     contents.append({"role": "user", "parts": [{"text": q}]})
 
     # Short follow-ups ("fees", "and hostel?") carry no topic on their own -
     # fold in the previous user turn so search still finds the right programme.
-    prev_user_msg = next((m.content for m in reversed(req.history or []) if m.role == "user"), None)
+    prev_user_msg = next((m.content for m in reversed(history) if m.role == "user"), None)
     search_query = f"{prev_user_msg} {q}" if prev_user_msg and prev_user_msg != q else q
 
-    extra = search_supabase(search_query)
+    # The Supabase client is synchronous; run it off the event loop so other
+    # students' answers keep streaming meanwhile.
+    extra = await asyncio.to_thread(search_supabase, search_query)
     body = {
         "system_instruction": {"parts": [{"text": SYSTEM_PROMPT.format(extra=extra)}]},
         "contents": contents,
     }
-
     try:
-        # 20s per model, at most two models: a stuck request gives up within ~40s.
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            resp = None
-            for model, thinking in GEMINI_MODELS:
-                try:
-                    resp = await client.post(
-                        f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
-                        # Key in a header, not the URL - httpx logs request URLs to Vercel logs.
-                        headers={"Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY},
-                        json={**body, "generationConfig": {"maxOutputTokens": 800, "temperature": 0.3,
-                                                           "thinkingConfig": thinking}},
-                    )
-                except httpx.TimeoutException:
-                    print(f"Gemini timeout on {model}")
-                    continue
-                # Overloaded (503) or out of quota (429): the fallback has its own capacity and quota.
-                if resp.status_code not in (429, 503):
-                    break
-                print(f"Gemini {resp.status_code} on {model}, trying next model")
-            if resp is None:
-                return {"answer": "That took too long. Please try again."}
-            data = resp.json()
-            if "candidates" in data and data["candidates"]:
-                cand = data["candidates"][0]
-                if "content" in cand and "parts" in cand["content"]:
-                    answer = cand["content"]["parts"][0].get("text", "")
-                    if answer.strip():
-                        return {"answer": answer.strip()}
-            if "error" in data:
-                err = data["error"].get("message", "")
-                print(f"Gemini error: {err}")
-                if "quota" in err.lower():
-                    return {"answer": "Getting too many requests right now. Please wait a moment and try again."}
-            return {"answer": "Sorry, please try asking again."}
-    except httpx.TimeoutException:
-        return {"answer": "That took too long. Please try again."}
+        async for text in gemini_stream(body):
+            yield text
     except Exception as e:
         print(f"Error: {e}")
-        return {"answer": "Something went wrong. Please try again or call SJU at 080-2227-4079."}
+        yield "Something went wrong. Please try again or call SJU at 080-2227-4079."
+
+
+@app.post("/chat/stream")
+async def chat_stream(req: ChatRequest):
+    async def events():
+        async for text in answer_stream(req):
+            yield f"data: {json.dumps(text)}\n\n"
+    return StreamingResponse(events(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+# Whole answer in one JSON reply - for API clients and any browser still holding
+# the pre-streaming embed.html in its cache.
+@app.post("/chat")
+async def chat(req: ChatRequest):
+    return {"answer": "".join([text async for text in answer_stream(req)])}
 
 
 @app.get("/health")
 def health():
+    now = time.time()
+    _roll_day(now)
     return {
         "status": "running",
-        "ai": GEMINI_MODELS[0][0],
-        "has_builtin_knowledge": True,
         "supabase_extra": sb is not None,
         "gemini_configured": bool(GEMINI_KEY),
+        # This instance's own counts; AI Studio > Rate limits is the full picture.
+        "models": {
+            model: {
+                "last_minute": f"{sum(1 for t, _ in _recent[model] if now - t < 60)}/{rpm}",
+                "today": f"{_today[model]}/{rpd}",
+                "skipped_for_s": max(0, round(_skip_until[model] - now)),
+            }
+            for model, rpm, rpd, *_ in MODELS
+        },
     }
 
 

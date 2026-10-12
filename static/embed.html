@@ -75,6 +75,7 @@ img{max-width:100%}
 .sd-empty{padding:15px 21px;font-size:18px;color:#999}
 .link-card{display:inline-flex;align-items:center;gap:12px;background:#fff;border:2px solid #f0c93d;border-radius:15px;padding:14px 21px;font-size:19px;font-weight:600;color:#0a2340;text-decoration:none;margin-top:9px;transition:all .15s}
 .link-card:hover{background:#fffbf0;box-shadow:0 3px 10px rgba(201,168,76,.3)}
+.cbub a:not(.link-card){color:#003580;text-decoration:underline;font-weight:600}
 </style>
 </head>
 <body>
@@ -284,6 +285,19 @@ function botMsg(html){
   const d=document.createElement('div'); d.className='cmsg bot';
   d.innerHTML=`<div class="cav"><img src="/static/logo.jpg" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div><div class="cbub">${html}</div>`;
   $msgs().appendChild(d); scrollDown();
+  return d.querySelector('.cbub');
+}
+// AI answer (plain text with light Markdown) -> safe HTML. Runs on every streamed
+// chunk, so it must also cope with half an answer.
+function fmt(t){
+  return esc(t)
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*\*/g,'')   // a bold whose closing ** hasn't streamed in yet
+    .replace(/^#{1,6}[ \t]+(.*)$/gm,'<strong>$1</strong>')   // "### Fees" heading
+    .replace(/^[ \t]*[*-][ \t]+/gm,'• ')                     // "*   item" bullet
+    .replace(/\*(\S(?:[^*\n]*\S)?)\*/g,'<em>$1</em>')         // "*fees may change*"
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)"'<>]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');
 }
 function usrMsg(text){
   const d=document.createElement('div'); d.className='cmsg usr';
@@ -304,6 +318,7 @@ function hideTyping(){ document.getElementById('cwTyping')?.remove(); }
 
 // ── Welcome / Start Over ─────────────────────────────────────────
 function startOver(){
+  inflight?.abort();   // drop an answer still streaming into the old conversation
   state.level=null; state.course=null; state.history=[]; state.openedLinks=[];
   $msgs().innerHTML=''; hideDrop();
   $inp().value=''; $inp().placeholder='Ask anything about SJU...';
@@ -426,34 +441,61 @@ function handleSend(){
   sendToAI(q);
 }
 
+let inflight=null;   // AbortController of the answer currently streaming
 async function sendToAI(q){
+  if(inflight) return;   // Enter pressed again while an answer is still streaming
   const btn=document.getElementById('cwBtn');
   $inp().value=''; hideDrop(); btn.disabled=true;
   usrMsg(q); showTyping();
+  const ctrl=inflight=new AbortController();
+  let ans='', bub=null;
   try{
-    const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({question:q,history:state.history})});
-    const data=await r.json(); hideTyping();
-    const ans=(data.answer||'Sorry, something went wrong.');
-    botMsg(esc(ans).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>'));
-    state.history.push({role:'user',content:q});
-    state.history.push({role:'assistant',content:ans});
-    if(state.history.length>20) state.history.splice(0,2);
-    const m=matchCourses(q);
-    const hit = m.exact.length===1 ? m.exact[0] : (m.exact.length===0 && m.loose.length===1 ? m.loose[0] : null);
-    const stillCurrent = state.course && m.loose.some(c=>c.name===state.course.name);
-    if(hit){
-      state.course=hit; state.level=hit.level;
-    }else if(m.loose.length>1 && !stillCurrent){
-      // question moved to a different subject but didn't name one programme -
-      // stale option cards here would send the student to the wrong page
-      state.course=null; state.level=null;
-      // ponytail: 6 buttons is a screenful; narrower matching would need real ranking
-      renderCourseChoices((m.exact.length>1?m.exact:m.loose).slice(0,6));
+    // Server-sent events: every "data:" line is a JSON string of answer text,
+    // shown the moment it arrives. The typing dots stay until the first words.
+    const r=await fetch('/chat/stream',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({question:q,history:state.history}),signal:ctrl.signal});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const reader=r.body.getReader(), dec=new TextDecoder();
+    let buf='';
+    for(;;){
+      const {done,value}=await reader.read();
+      if(done) break;
+      buf+=dec.decode(value,{stream:true});
+      const events=buf.split('\n\n'); buf=events.pop();
+      for(const ev of events){
+        if(!ev.startsWith('data: ')) continue;
+        ans+=JSON.parse(ev.slice(6));
+        if(!bub){ hideTyping(); bub=botMsg(''); }
+        bub.innerHTML=fmt(ans); scrollDown();
+      }
     }
-    if(state.course) renderOptionCards();   // keep options handy, pointed at the right programme
-  }catch(e){ hideTyping(); botMsg('Sorry, something went wrong. Please try again.'); }
-  finally{ btn.disabled=false; $inp().focus(); }
+  }catch(e){
+    if(ctrl.signal.aborted) return;   // Start Over wiped this conversation
+    if(ans) ans+='\n\n(The connection dropped - please ask again.)';
+  }finally{
+    if(inflight===ctrl) inflight=null;
+    btn.disabled=false; $inp().focus();
+  }
+  hideTyping();
+  if(!ans){ botMsg('Sorry, something went wrong. Please try again.'); return; }
+  if(!bub) bub=botMsg('');
+  bub.innerHTML=fmt(ans);
+  state.history.push({role:'user',content:q});
+  state.history.push({role:'assistant',content:ans});
+  if(state.history.length>20) state.history.splice(0,2);
+  const m=matchCourses(q);
+  const hit = m.exact.length===1 ? m.exact[0] : (m.exact.length===0 && m.loose.length===1 ? m.loose[0] : null);
+  const stillCurrent = state.course && m.loose.some(c=>c.name===state.course.name);
+  if(hit){
+    state.course=hit; state.level=hit.level;
+  }else if(m.loose.length>1 && !stillCurrent){
+    // question moved to a different subject but didn't name one programme -
+    // stale option cards here would send the student to the wrong page
+    state.course=null; state.level=null;
+    // ponytail: 6 buttons is a screenful; narrower matching would need real ranking
+    renderCourseChoices((m.exact.length>1?m.exact:m.loose).slice(0,6));
+  }
+  if(state.course) renderOptionCards();   // keep options handy, pointed at the right programme
 }
 
 // ── Input events: live search, keyboard nav, Enter to send ───────
