@@ -4,6 +4,7 @@ Strong built-in knowledge that ALWAYS answers common questions.
 Also checks Supabase for extra info if available.
 Uses Gemini 2.5 Flash (free tier).
 """
+import asyncio
 import os
 import httpx
 from fastapi import FastAPI
@@ -308,20 +309,27 @@ async def chat(req: ChatRequest):
         async with httpx.AsyncClient(timeout=30.0) as client:
             extra = search_supabase(search_query)
             system = SYSTEM_PROMPT.format(extra=extra)
-            resp = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_KEY}",
-                headers={"Content-Type": "application/json"},
-                json={
-                    "system_instruction": {"parts": [{"text": system}]},
-                    "contents": contents,
-                    # gemini-flash-latest is a thinking model; without thinking turned down it
-                    # spends the token budget reasoning and truncates the visible answer.
-                    # It now resolves to Gemini 3.x, which rejects the old thinkingBudget
-                    # field with 400 INVALID_ARGUMENT - thinkingLevel "minimal" replaces it.
-                    "generationConfig": {"maxOutputTokens": 800, "temperature": 0.3,
-                                         "thinkingConfig": {"thinkingLevel": "minimal"}},
-                }
-            )
+            # Gemini intermittently answers 503 "high demand"; a quick retry usually lands.
+            for attempt in range(3):
+                resp = await client.post(
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent",
+                    # Key in a header, not the URL - httpx logs request URLs to Vercel logs.
+                    headers={"Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY},
+                    json={
+                        "system_instruction": {"parts": [{"text": system}]},
+                        "contents": contents,
+                        # gemini-flash-latest is a thinking model; without thinking turned down it
+                        # spends the token budget reasoning and truncates the visible answer.
+                        # It now resolves to a Gemini 3.x model that rejects both the old
+                        # thinkingBudget field and thinkingLevel "minimal" (400 INVALID_ARGUMENT);
+                        # "low" is the lowest level it accepts.
+                        "generationConfig": {"maxOutputTokens": 800, "temperature": 0.3,
+                                             "thinkingConfig": {"thinkingLevel": "low"}},
+                    }
+                )
+                if resp.status_code != 503:
+                    break
+                await asyncio.sleep(1 + attempt)
             data = resp.json()
             if "candidates" in data and data["candidates"]:
                 cand = data["candidates"][0]
