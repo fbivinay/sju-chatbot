@@ -2,9 +2,8 @@
 SJU Chatbot - RELIABLE VERSION
 Strong built-in knowledge that ALWAYS answers common questions.
 Also checks Supabase for extra info if available.
-Uses Gemini 2.5 Flash (free tier).
+Uses Gemini 2.5 Flash (free tier), falling back to Flash-Lite.
 """
-import asyncio
 import os
 import httpx
 from fastapi import FastAPI
@@ -274,6 +273,16 @@ def search_supabase(question: str) -> str:
     return ""
 
 
+# Pinned, not "-latest": the -latest aliases move to new models without notice, which
+# broke this bot twice (thinking params rejected, 20 requests/day free quota).
+# Thinking is turned down so the model doesn't spend the output budget reasoning;
+# 2.5 takes thinkingBudget, 3.x takes thinkingLevel.
+GEMINI_MODELS = [
+    ("gemini-2.5-flash", {"thinkingBudget": 0}),
+    ("gemini-flash-lite-latest", {"thinkingLevel": "low"}),
+]
+
+
 class Message(BaseModel):
     role: str
     content: str
@@ -305,31 +314,34 @@ async def chat(req: ChatRequest):
     prev_user_msg = next((m.content for m in reversed(req.history or []) if m.role == "user"), None)
     search_query = f"{prev_user_msg} {q}" if prev_user_msg and prev_user_msg != q else q
 
+    extra = search_supabase(search_query)
+    body = {
+        "system_instruction": {"parts": [{"text": SYSTEM_PROMPT.format(extra=extra)}]},
+        "contents": contents,
+    }
+
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            extra = search_supabase(search_query)
-            system = SYSTEM_PROMPT.format(extra=extra)
-            # Gemini intermittently answers 503 "high demand"; a quick retry usually lands.
-            for attempt in range(3):
-                resp = await client.post(
-                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent",
-                    # Key in a header, not the URL - httpx logs request URLs to Vercel logs.
-                    headers={"Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY},
-                    json={
-                        "system_instruction": {"parts": [{"text": system}]},
-                        "contents": contents,
-                        # gemini-flash-latest is a thinking model; without thinking turned down it
-                        # spends the token budget reasoning and truncates the visible answer.
-                        # It now resolves to a Gemini 3.x model that rejects both the old
-                        # thinkingBudget field and thinkingLevel "minimal" (400 INVALID_ARGUMENT);
-                        # "low" is the lowest level it accepts.
-                        "generationConfig": {"maxOutputTokens": 800, "temperature": 0.3,
-                                             "thinkingConfig": {"thinkingLevel": "low"}},
-                    }
-                )
-                if resp.status_code != 503:
+        # 20s per model, at most two models: a stuck request gives up within ~40s.
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            resp = None
+            for model, thinking in GEMINI_MODELS:
+                try:
+                    resp = await client.post(
+                        f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+                        # Key in a header, not the URL - httpx logs request URLs to Vercel logs.
+                        headers={"Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY},
+                        json={**body, "generationConfig": {"maxOutputTokens": 800, "temperature": 0.3,
+                                                           "thinkingConfig": thinking}},
+                    )
+                except httpx.TimeoutException:
+                    print(f"Gemini timeout on {model}")
+                    continue
+                # Overloaded (503) or out of quota (429): the fallback has its own capacity and quota.
+                if resp.status_code not in (429, 503):
                     break
-                await asyncio.sleep(1 + attempt)
+                print(f"Gemini {resp.status_code} on {model}, trying next model")
+            if resp is None:
+                return {"answer": "That took too long. Please try again."}
             data = resp.json()
             if "candidates" in data and data["candidates"]:
                 cand = data["candidates"][0]
@@ -354,7 +366,7 @@ async def chat(req: ChatRequest):
 def health():
     return {
         "status": "running",
-        "ai": "gemini-flash-latest",
+        "ai": GEMINI_MODELS[0][0],
         "has_builtin_knowledge": True,
         "supabase_extra": sb is not None,
         "gemini_configured": bool(GEMINI_KEY),
