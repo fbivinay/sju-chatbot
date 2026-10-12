@@ -45,7 +45,10 @@ create table if not exists sju_knowledge_staging (
   source_url text,
   page_name text
 );
-alter table sju_knowledge_staging enable row level security;   -- no policies: public keys can't touch it
+alter table sju_knowledge_staging enable row level security;
+drop policy if exists "No public access" on sju_knowledge_staging;
+create policy "No public access" on sju_knowledge_staging
+  for all to anon, authenticated using (false) with check (false);   -- only the secret key (bypasses RLS)
 revoke all on sju_knowledge_staging from anon, authenticated;
 
 -- Replace the live knowledge base with the staged scrape in one transaction, so the bot
