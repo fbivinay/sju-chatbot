@@ -8,7 +8,7 @@ and loads the raw text into Supabase for Postgres full-text search (no embedding
 SETUP (run these on your laptop, in order):
     pip install playwright beautifulsoup4 supabase defusedxml
     playwright install chromium          <-- IMPORTANT: downloads the browser (~150MB, one time)
-    export SUPABASE_URL=...  SUPABASE_KEY=...
+    export SUPABASE_URL=...  SUPABASE_KEY=sb_secret_...   # secret key: the publishable one is read-only
     python scrape_playwright.py
 
 This is laptop-only. Don't push it to GitHub with keys in it.
@@ -219,7 +219,7 @@ def main():
     if not SUPABASE_URL or not SUPABASE_KEY:
         print("\nERROR: SUPABASE_URL and SUPABASE_KEY must be set in environment variables")
         print("  export SUPABASE_URL=https://your-project.supabase.co")
-        print("  export SUPABASE_KEY=your-service-role-key")
+        print("  export SUPABASE_KEY=sb_secret_...   (Supabase > Settings > API Keys > Secret keys)")
         return
     print("\nConnecting to Supabase...")
     sb = create_client(SUPABASE_URL, SUPABASE_KEY)

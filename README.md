@@ -56,7 +56,7 @@ full-text search, so there are no embedding API calls and no vector database.
 |-------------------|-----------------------|-----------------------------------------------|
 | `GEMINI_API_KEY`  | Chat answers          | Required. Get one free at ai.google.dev       |
 | `SUPABASE_URL`    | Knowledge-base search | Optional — bot still runs on built-in facts   |
-| `SUPABASE_KEY`    | Knowledge-base search | Publishable/anon key is enough (read + write) |
+| `SUPABASE_KEY`    | Knowledge-base search | Publishable key (`sb_publishable_…`) — the public keys can only read |
 
 If Supabase vars are missing, the bot falls back to built-in knowledge only.
 
@@ -150,7 +150,9 @@ creates the GIN full-text index and the `match_sju_knowledge(query, match_count)
 function that `main.py` calls.
 
 **Refreshing content:** the scraper (`scrape_playwright.py`) runs on a laptop,
-reading `SUPABASE_URL` / `SUPABASE_KEY` from the environment. It pulls SJU's
+reading `SUPABASE_URL` / `SUPABASE_KEY` from the environment — a **secret** key
+(`sb_secret_…`, Supabase → Settings → API Keys), since the publishable key
+can only read. Never commit it. It pulls SJU's
 `sitemap.xml`, renders each page with Playwright, chunks the text, clears the
 table, and re-uploads (caching progress in the gitignored
 `scraped_chunks.json`). Re-run it whenever the site changes.

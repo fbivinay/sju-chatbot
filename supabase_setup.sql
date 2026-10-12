@@ -27,3 +27,10 @@ as $$
   order by rank desc
   limit match_count;
 $$;
+
+-- Anyone holding the publishable key may only read. The scraper writes with a
+-- secret key, which bypasses RLS.
+alter table sju_knowledge enable row level security;
+drop policy if exists "Allow public read" on sju_knowledge;
+create policy "Allow public read" on sju_knowledge for select using (true);
+revoke insert, update, delete, truncate on sju_knowledge from anon, authenticated;
