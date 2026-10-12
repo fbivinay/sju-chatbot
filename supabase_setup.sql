@@ -66,13 +66,13 @@ begin
   if new_count < greatest(50, old_count * min_ratio) then
     raise exception 'refusing to swap: scrape has % chunks, live table has %', new_count, old_count;
   end if;
-  delete from public.sju_knowledge;
+  delete from public.sju_knowledge where true;   -- API sessions reject a bare DELETE (pg-safeupdate)
   insert into public.sju_knowledge (content, source_url, page_name)
     select distinct on (md5(content)) content, source_url, page_name
       from public.sju_knowledge_staging
      where content <> ''
      order by md5(content), id;
-  delete from public.sju_knowledge_staging;
+  delete from public.sju_knowledge_staging where true;
   return new_count;
 end $$;
 revoke execute on function swap_sju_knowledge(real) from public, anon, authenticated;
