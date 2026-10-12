@@ -34,3 +34,46 @@ alter table sju_knowledge enable row level security;
 drop policy if exists "Allow public read" on sju_knowledge;
 create policy "Allow public read" on sju_knowledge for select using (true);
 revoke insert, update, delete, truncate on sju_knowledge from anon, authenticated;
+
+-- The same text can never be stored twice, whatever writes to the table.
+create unique index if not exists sju_knowledge_content_key on sju_knowledge (md5(content));
+
+-- The daily refresh loads here first; the live table only changes in swap_sju_knowledge().
+create table if not exists sju_knowledge_staging (
+  id bigint generated always as identity primary key,
+  content text not null,
+  source_url text,
+  page_name text
+);
+alter table sju_knowledge_staging enable row level security;   -- no policies: public keys can't touch it
+revoke all on sju_knowledge_staging from anon, authenticated;
+
+-- Replace the live knowledge base with the staged scrape in one transaction, so the bot
+-- sees either the old set or the new one, never a half-loaded or doubled table. Refuses
+-- a scrape that came back much smaller than what's live (site down, layout change).
+create or replace function swap_sju_knowledge(min_ratio real default 0.6)
+returns integer
+language plpgsql
+set search_path = ''
+as $$
+declare
+  new_count integer;
+  old_count integer;
+begin
+  perform pg_advisory_xact_lock(hashtext('swap_sju_knowledge'));
+  select count(distinct md5(content)) into new_count from public.sju_knowledge_staging where content <> '';
+  select count(*) into old_count from public.sju_knowledge;
+  if new_count < greatest(50, old_count * min_ratio) then
+    raise exception 'refusing to swap: scrape has % chunks, live table has %', new_count, old_count;
+  end if;
+  delete from public.sju_knowledge;
+  insert into public.sju_knowledge (content, source_url, page_name)
+    select distinct on (md5(content)) content, source_url, page_name
+      from public.sju_knowledge_staging
+     where content <> ''
+     order by md5(content), id;
+  delete from public.sju_knowledge_staging;
+  return new_count;
+end $$;
+revoke execute on function swap_sju_knowledge(real) from public, anon, authenticated;
+grant execute on function swap_sju_knowledge(real) to service_role;

@@ -18,24 +18,34 @@ User question
 FastAPI  /chat  (main.py)
      │
      ├─► Supabase full-text search ── top 6 relevant chunks of real SJU content
-     │        (match_sju_knowledge, Postgres websearch_to_tsquery + ts_rank)
+     │        (match_sju_knowledge, Postgres plainto_tsquery + ts_rank)
+     │
+     ├─► Live sju.edu.in pages ── for questions about dates, deadlines or
+     │        notices: the important-dates and announcements pages, read
+     │        while the student waits (cached 15 min)
      │
      └─► Gemini — first free-tier model with quota left (8 in rotation)
-              system prompt = built-in facts + retrieved chunks
+              system prompt = live pages + stored chunks + built-in facts
               → answer streams back word by word
 ```
 
-Two knowledge sources are combined:
+Three knowledge sources are combined, newest first:
 
-1. **Built-in knowledge** (`KNOWLEDGE` in `main.py`) — core facts (address,
+1. **Live official pages** — what changes within a day: the important-dates
+   page (deadlines, entrance tests, interviews per programme) and announcements,
+   read from sju.edu.in at question time, so they are what the site says right
+   now. Only `*.sju.edu.in` is read; if the site is slow or down the bot answers
+   from the knowledge base instead (pages time out after 3 s).
+2. **Supabase knowledge base** — ~960 text chunks from ~290 SJU pages,
+   re-scraped every day, retrieved by **Postgres full-text search**
+   (keyword/relevance ranking, no embeddings).
+3. **Built-in knowledge** (`KNOWLEDGE` in `main.py`) — core facts (address,
    rankings, course list, contacts) hard-coded so the bot always answers common
    questions, even with no database.
-2. **Supabase knowledge base** — ~940 text chunks scraped from ~290 real SJU
-   pages, retrieved by **Postgres full-text search** (keyword/relevance ranking,
-   no embeddings).
 
-Gemini is used **only to write the final answer**. Retrieval is plain SQL
-full-text search, so there are no embedding API calls and no vector database.
+Gemini is used **only to write the final answer**, from what it is given — it
+doesn't browse. It is told never to guess specifics (fees, dates, names): if none
+of the sources state them, it says so and points to the official page or phone.
 
 ---
 
@@ -83,8 +93,8 @@ about 60 requests a minute and 1,100+ a day before Gemma's large daily pool.
 To change models or limits, edit the `MODELS` table — the numbers come from
 AI Studio → Rate limits for the key's project. `GET /health` shows each
 model's usage on the instance that answers (Vercel can run several, so AI
-Studio stays the full picture). `python test_rotation.py` checks the rotation
-logic offline, without spending quota.
+Studio stays the full picture). `python test_chat.py` checks the rotation and
+the live page reading offline, without spending quota.
 
 ---
 
@@ -146,16 +156,30 @@ The `sju_knowledge` table holds the scraped content:
 | `created_at` | timestamptz |
 
 **One-time setup:** run `supabase_setup.sql` in the Supabase SQL Editor. It
-creates the GIN full-text index and the `match_sju_knowledge(query, match_count)`
-function that `main.py` calls.
+creates the full-text index, the `match_sju_knowledge(query, match_count)`
+function that `main.py` calls, the read-only rules for public keys, the
+no-duplicates index and the staging table + swap function the refresh uses.
 
-**Refreshing content:** the scraper (`scrape_playwright.py`) runs on a laptop,
-reading `SUPABASE_URL` / `SUPABASE_KEY` from the environment — a **secret** key
-(`sb_secret_…`, Supabase → Settings → API Keys), since the publishable key
-can only read. Never commit it. It pulls SJU's
-`sitemap.xml`, renders each page with Playwright, chunks the text, clears the
-table, and re-uploads (caching progress in the gitignored
-`scraped_chunks.json`). Re-run it whenever the site changes.
+**Daily refresh:** `.github/workflows/refresh-knowledge.yml` runs
+`scrape_playwright.py` every day at 03:00 IST on GitHub Actions (free for public
+repos; also runnable by hand from the Actions tab). The scraper pulls SJU's
+`sitemap.xml`, renders each page with Playwright and chunks the text, then:
+
+- loads the chunks into `sju_knowledge_staging`, never into the live table;
+- calls `swap_sju_knowledge()`, which replaces the live table with the staged
+  chunks **in one transaction** — the bot sees the old set or the new one, never
+  a half-loaded or doubled table;
+- keeps one copy of each text (a unique index on `md5(content)` makes duplicates
+  impossible whatever writes to the table);
+- refuses a scrape that comes back far smaller than what's live (less than 60%),
+  so a site outage or redesign can't wipe the knowledge base — the run fails,
+  yesterday's data stays live, and GitHub emails the repo owner.
+
+It needs one repository secret, `SUPABASE_SECRET_KEY`: a Supabase **secret**
+key (`sb_secret_…`, Supabase → Project Settings → API Keys → Secret keys), since
+the publishable key can only read. Never commit it. GitHub pauses scheduled
+workflows in a repo with no commits for 60 days — re-enable it from the Actions
+tab if that happens.
 
 ---
 
@@ -180,5 +204,5 @@ export GEMINI_API_KEY=...   SUPABASE_URL=...   SUPABASE_KEY=...
 uvicorn main:app --reload
 # open http://localhost:8000
 
-python test_rotation.py   # offline check of the model rotation
+python test_chat.py   # offline checks: model rotation + live page reading
 ```

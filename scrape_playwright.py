@@ -5,13 +5,18 @@ Pulls every real page from SJU's sitemap.xml, opens each in a real headless
 Chrome, waits for JS content to load, strips navigation with BeautifulSoup,
 and loads the raw text into Supabase for Postgres full-text search (no embeddings).
 
-SETUP (run these on your laptop, in order):
+Runs daily on GitHub Actions (.github/workflows/refresh-knowledge.yml). To run it
+by hand instead:
     pip install playwright beautifulsoup4 supabase defusedxml
     playwright install chromium          <-- IMPORTANT: downloads the browser (~150MB, one time)
     export SUPABASE_URL=...  SUPABASE_KEY=sb_secret_...   # secret key: the publishable one is read-only
     python scrape_playwright.py
 
-This is laptop-only. Don't push it to GitHub with keys in it.
+The scrape is loaded into sju_knowledge_staging, then swap_sju_knowledge() replaces
+the live table with it in one transaction (deduplicated). The bot never sees a
+half-loaded or doubled knowledge base, and a scrape far smaller than what's live is
+refused - so a failed run leaves the previous data in place.
+Keys come from the environment only - never write them into this file.
 """
 import os
 import re
@@ -31,6 +36,7 @@ SITEMAP_URL = "https://www.sju.edu.in/sitemap.xml"
 # the small curated EVENT_URLS list below covers current highlights instead
 SITEMAP_SKIP = ("/events-detail", "/news-detail")
 CACHE_FILE = "scraped_chunks.json"
+CACHE_MAX_AGE = 12 * 3600   # only resume from a scrape this fresh, never upload stale pages
 
 
 def fetch_sitemap_urls():
@@ -220,13 +226,13 @@ def main():
         print("\nERROR: SUPABASE_URL and SUPABASE_KEY must be set in environment variables")
         print("  export SUPABASE_URL=https://your-project.supabase.co")
         print("  export SUPABASE_KEY=sb_secret_...   (Supabase > Settings > API Keys > Secret keys)")
-        return
+        raise SystemExit(1)
     print("\nConnecting to Supabase...")
     sb = create_client(SUPABASE_URL, SUPABASE_KEY)
     print("  Ready!")
 
-    if os.path.exists(CACHE_FILE):
-        print(f"\nFound cached scrape ({CACHE_FILE}) — skipping the browser pass, uploading from cache.")
+    if os.path.exists(CACHE_FILE) and time.time() - os.path.getmtime(CACHE_FILE) < CACHE_MAX_AGE:
+        print(f"\nFound a fresh cached scrape ({CACHE_FILE}) — skipping the browser pass, uploading from cache.")
         print("  (delete this file to force a fresh scrape)")
         with open(CACHE_FILE, "r", encoding="utf-8") as f:
             all_chunks = json.load(f)
@@ -285,44 +291,38 @@ def main():
             print(f"  Cached to {CACHE_FILE} (safe to re-run upload if this fails)")
 
     if not all_chunks:
-        print("  Nothing captured. Tell me and we'll adjust the page-waiting/selectors.")
-        return
+        raise SystemExit("Nothing captured - the live knowledge base was left untouched.")
 
-    print("\nClearing old data from sju_knowledge...")
-    try:
-        sb.table("sju_knowledge").delete().neq("id", 0).execute()
-        print("  Cleared!")
-    except Exception as e:
-        print(f"  Note: {e}")
-
-    print("\nUploading to Supabase (full-text search, no embeddings)...")
+    unique = len({c["content"] for c in all_chunks})
+    print(f"\nStaging {len(all_chunks)} chunks ({unique} unique texts)...")
+    # Leftovers from a run that died before its swap.
+    sb.table("sju_knowledge_staging").delete().neq("id", 0).execute()
     B, up = 100, 0
     for i in range(0, len(all_chunks), B):
-        batch = all_chunks[i:i + B]
-        rows = [{
-            "content": c["content"],
-            "source_url": c["source_url"],
-            "page_name": c["page_name"],
-        } for c in batch]
-        # Retry the whole batch until it lands — never silently drop chunks.
+        rows = [{"content": c["content"], "source_url": c["source_url"], "page_name": c["page_name"]}
+                for c in all_chunks[i:i + B]]
+        # Retry until the batch lands. A retry that doubles a batch is harmless:
+        # the swap keeps one copy of each text.
         for attempt in range(1, 6):
             try:
-                sb.table("sju_knowledge").insert(rows).execute()
-                up += len(batch)
-                print(f"  Uploaded {up}/{len(all_chunks)}...")
+                sb.table("sju_knowledge_staging").insert(rows).execute()
+                up += len(rows)
+                print(f"  Staged {up}/{len(all_chunks)}...")
                 break
             except Exception as e:
                 wait = 3 * attempt
                 print(f"  batch {i//B+1} attempt {attempt}/5 failed: {str(e)[:120]} — retrying in {wait}s")
                 time.sleep(wait)
         else:
-            # ponytail: abort loud instead of finishing with holes; re-run resumes from the scrape cache.
-            raise SystemExit(f"Batch at offset {i} failed 5x — aborting so the table isn't left incomplete.")
+            raise SystemExit(f"Batch at offset {i} failed 5x - the live knowledge base was left untouched.")
 
+    print("\nSwapping the new scrape in (one transaction)...")
+    # MIN_RATIO: how much smaller than the live table the new scrape may be. Lower it
+    # for one run if SJU genuinely removed many pages.
+    live = sb.rpc("swap_sju_knowledge", {"min_ratio": float(os.getenv("MIN_RATIO", "0.6"))}).execute().data
     print("\n" + "=" * 60)
-    print(f"  DONE! {up} chunks of REAL SJU content in Supabase.")
+    print(f"  DONE! {live} unique chunks of current SJU content are live.")
     print("=" * 60)
-    print("\n  Your bot reads Supabase live - test it now, no redeploy needed.")
 
 
 if __name__ == "__main__":

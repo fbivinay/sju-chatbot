@@ -1,0 +1,42 @@
+name: Refresh knowledge base
+
+# Re-scrapes sju.edu.in every day and swaps the result into Supabase in one
+# transaction (see scrape_playwright.py). A failed or suspiciously small scrape
+# leaves the previous knowledge base live, and GitHub emails the repo owner.
+#
+# Needs one repository secret: SUPABASE_SECRET_KEY, a Supabase secret key
+# (sb_secret_..., Supabase > Project Settings > API Keys > Secret keys).
+
+on:
+  schedule:
+    - cron: "30 21 * * *"   # 03:00 IST, every day
+  workflow_dispatch:
+    inputs:
+      min_ratio:
+        description: "Refuse a scrape smaller than this share of the live table (lower it only if SJU removed many pages)"
+        default: "0.6"
+
+concurrency:
+  group: refresh-knowledge
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install playwright beautifulsoup4 supabase defusedxml
+      - run: python -m playwright install --with-deps chromium
+      - run: python scrape_playwright.py
+        env:
+          SUPABASE_URL: https://mvszfevopamhkratxeak.supabase.co
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          MIN_RATIO: ${{ inputs.min_ratio || '0.6' }}
+          PYTHONUNBUFFERED: "1"

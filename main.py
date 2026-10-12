@@ -1,13 +1,18 @@
 """
 SJU Chatbot
 Strong built-in knowledge that ALWAYS answers common questions.
-Also checks Supabase for extra info if available.
+Adds the matching chunks of the Supabase knowledge base (sju.edu.in, scraped daily)
+and, for questions about dates, deadlines or notices, reads those pages of the official site live.
 Answers stream from Gemini, rotating across free-tier models as limits fill up.
 """
 import asyncio
+import html
 import json
+import math
 import os
+import re
 import time
+from datetime import datetime, timedelta, timezone
 import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -204,12 +209,6 @@ Note: fees change each year and vary by specialisation. These are approximate ra
 - NSS (National Service Scheme): active unit, open for enrolment
 - NCC (National Cadet Corps): active unit, open for enrolment
 
-=== LATEST ANNOUNCEMENTS (June 2026) ===
-- Orientation Notice to all First Year Students 2026-27 (25 May 2026)
-- Extension of Last Date for Convocation/Degree Completion Certificates to 13 June 2026
-- Admissions 2026-27 are OPEN
-- SJU ranked 4th in Karnataka (The Week 2026)
-
 === OTHER USEFUL INFO ===
 - Class timetable 2026: sju.edu.in/services/timetable/time-table-2026.php
 - Academic calendar: sju.edu.in/about/calendar.php
@@ -224,17 +223,20 @@ Note: fees change each year and vary by specialisation. These are approximate ra
 SYSTEM_PROMPT = """You are the official AI assistant for St Joseph's University (SJU), Bengaluru.
 You help students in a warm, friendly, helpful way - like a knowledgeable senior student.
 
+Today is {today} (India). Any deadline, test or event dated before today has already
+passed - say so plainly, never present it as upcoming.
+
 Use the SJU knowledge below to answer questions. The knowledge is accurate and comprehensive.
 
 RULES:
-1. ALWAYS give a direct, helpful answer using the knowledge below. You have lots of information - use it.
-2. For courses, admissions, placements, hostel, scholarships, sports, facilities - you have full details, so answer confidently.
-3. For fees: if the SJU CONTENT above contains a fee table or figures, quote the EXACT amounts (category-wise and year-wise, e.g. Karnataka/Non-Karnataka/NRI). Do NOT invent or round to a vague range. Add one short line that fees may change yearly - confirm at admissions.sju.edu.in.
-4. If the SJU CONTENT above contains names, dates, or details, USE them (e.g. the Dean's or faculty names). Only say you don't have something when it is genuinely absent from the content above - then point to the right page or phone number.
+1. ALWAYS give a direct, helpful answer using the SJU website content and the knowledge base below.
+2. Content marked LIVE was read from sju.edu.in seconds ago. It is the newest information and beats the stored content and the knowledge base whenever they differ. Quote dates, deadlines and statuses (open/closed) exactly as it states them.
+3. For fees: if the SJU website content contains a fee table or figures, quote the EXACT amounts (category-wise and year-wise, e.g. Karnataka/Non-Karnataka/NRI). Do NOT invent or round to a vague range. Add one short line that fees may change yearly - confirm at admissions.sju.edu.in.
+4. If the SJU website content contains names, dates, or details, USE them (e.g. the Dean's or faculty names).
 5. If student says "yes", "tell me more", "go on" - continue the previous topic.
 6. Use bullet points for lists - NEVER Markdown tables, the chat window can't display them; give fee figures as bullets (one line per category or year). Keep answers under 250 words. Be friendly and warm.
-7. NEVER just say "I couldn't find that" for common topics - you HAVE the information, use it.
-8. When your answer draws on the SJU CONTENT above, cite its source URL as a Markdown link, e.g. [MSc Big Data Analytics](https://www.sju.edu.in/programmes/msc-in-big-data-analytics).
+7. NEVER guess or invent specifics - fees, dates, deadlines, names, phone numbers, seat counts. If the content and knowledge below don't state it, say you couldn't confirm it right now and point to the right official page or 080-2227-4079. For general topics (courses, facilities, hostel, placements, admissions process) the knowledge base has the answer - use it confidently.
+8. When your answer draws on the SJU website content, cite its source URL as a Markdown link, e.g. [MSc Big Data Analytics](https://www.sju.edu.in/programmes/msc-in-big-data-analytics).
 
 {extra}
 
@@ -250,30 +252,173 @@ QUERY_ABBREVIATIONS = {
 }
 
 
-def search_supabase(question: str) -> str:
-    """Full-text search over real crawled SJU content in Supabase (no embeddings)."""
-    if not sb:
-        return ""
+def expand(question: str) -> str:
     words = question.lower().split()
     expansions = {QUERY_ABBREVIATIONS[w] for w in words if w in QUERY_ABBREVIATIONS}
-    query = question if not expansions else question + " " + " ".join(expansions)
+    return question if not expansions else question + " " + " ".join(expansions)
+
+
+def search_kb(question: str) -> list:
+    """Full-text search over the scraped SJU pages in Supabase (refreshed daily)."""
+    if not sb:
+        return []
     try:
-        r = sb.rpc("match_sju_knowledge", {"query": query, "match_count": 6}).execute()
-        rows = r.data or []
-        if not rows:
-            return ""
-        chunks = []
-        for row in rows:
-            pg = row.get("page_name", "")
-            url = row.get("source_url", "")
-            # Keep enough text that fee tables / details aren't cut off, and pass the
-            # source URL so the model can link to it.
-            chunks.append(f"[{pg}] (source: {url})\n{row['content'][:2000]}")
-        return ("=== REAL CONTENT FROM SJU WEBSITE (use this first; quote exact figures "
-                "and link the source URL) ===\n" + "\n\n".join(chunks))
+        return sb.rpc("match_sju_knowledge", {"query": expand(question), "match_count": 6}).execute().data or []
     except Exception as e:
         print(f"Supabase search error: {e}")
-    return ""
+        return []
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# LIVE PAGES FROM SJU.EDU.IN
+# ════════════════════════════════════════════════════════════════════════════
+# The knowledge base is a daily snapshot. Dates, deadlines and notices change within
+# a day, so for those questions the important-dates and announcements pages are read
+# from the official site while the student waits (cached 15 min).
+IST = timezone(timedelta(hours=5, minutes=30))   # India has no daylight saving
+DATES_PAGE = "https://www.sju.edu.in/important-dates.php"
+NEWS_PAGE = "https://www.sju.edu.in/announcements.php"
+PAGE_TITLES = {DATES_PAGE: "Important dates & admission timeline", NEWS_PAGE: "Announcements"}
+TIME_WORDS = {"date", "dates", "deadline", "last", "apply", "application", "applications", "admission",
+              "admissions", "open", "opens", "closed", "entrance", "sjuet", "exam", "exams", "result",
+              "results", "timetable", "schedule", "when", "interview", "orientation", "2026", "2027"}
+NEWS_WORDS = {"notice", "notices", "announcement", "announcements", "news", "event", "events", "holiday",
+              "holidays", "circular", "latest", "today", "update", "updates", "convocation"}
+STOP_WORDS = {"the", "and", "for", "what", "which", "who", "how", "are", "sju", "joseph", "university",
+              "about", "tell", "can", "you", "please", "with", "does", "there", "this", "that", "from"}
+SJU_URL = re.compile(r"https://([a-z0-9-]+\.)*sju\.edu\.in/")
+LIVE_TTL, LIVE_FAIL_TTL = 15 * 60, 2 * 60
+_live_cache = {}   # url -> (fetched_at, page text, or None if the fetch failed)
+
+
+def strip_tags(fragment: str) -> str:
+    return re.sub(r"\s+", " ", html.unescape(re.sub(r"(?s)<[^>]+>", " ", fragment))).strip()
+
+
+def table_text(table_html: str, label: str) -> str:
+    """Each row as one self-describing line - "Programme Name: MCA; Last Date to Apply:
+    15 January 2026; ..." - so a date can't be read under the wrong column, even when
+    only a few rows of a long table reach the model."""
+    rows = [[strip_tags(c) for c in re.findall(r"(?is)<t[hd]\b[^>]*>(.*?)</t[hd]>", tr)]
+            for tr in re.findall(r"(?is)<tr\b.*?</tr>", table_html)]
+    rows = [r for r in rows if any(r)]
+    if len(rows) < 2:
+        return strip_tags(table_html)
+    head = rows[0]
+    lines = []
+    for row in rows[1:]:
+        cells = [f"{h}: {c}" for h, c in zip(head, row) if c and c not in "-—–" and not h.lower().startswith("sl")]
+        lines.append(label + "; ".join(cells) + ".")
+    return " ".join(lines)
+
+
+def page_text(page_html: str) -> str:
+    """Visible text of an SJU page, minus scripts, menus, header, footer and comments."""
+    page_html = re.sub(r"(?s)<!--.*?-->", " ", page_html)   # old dates live in commented-out cells
+    page_html = re.sub(r"(?is)<(script|style|noscript|svg|nav|header|footer|form|button)\b.*?</\1>", " ", page_html)
+    tables = re.findall(r"(?is)<table\b.*?</table>", page_html)
+    # Tabs like "CYCLE 1  CYCLE 2  CYCLE 3" above one table each: name the rows after them.
+    tabs = re.findall(r"(?i)\bcycle\s*\d+\b", strip_tags(page_html.split("<table", 1)[0])) if tables else []
+    for i, table in enumerate(tables):
+        label = f"{tabs[i].title()}: " if len(tabs) == len(tables) else ""
+        page_html = page_html.replace(table, f" {table_text(table, label)} ", 1)
+    return strip_tags(page_html)
+
+
+def relevant(text: str, terms: list, budget: int = 3500) -> str:
+    """The page's opening (title, column headings) plus the passages that best match the question."""
+    # ~700-char passages cut only between sentences (a table row is one sentence), so a
+    # row never lands half in one passage and half in another.
+    pieces, cur = [], ""
+    for sentence in re.split(r"(?<=[.!?])\s+", text):
+        for part in re.findall(r".{1,1400}(?:\s|$)", sentence) or [sentence]:   # runaway "sentences"
+            if cur and len(cur) + len(part) > 700:
+                pieces.append(cur)
+                cur = ""
+            cur = f"{cur} {part}".strip()
+    if cur:
+        pieces.append(cur)
+    if not pieces:
+        return ""
+    lows = [p.lower().replace(".", "") for p in pieces]   # "M.Sc." matches "msc"
+    # Words on every part of the page ("date", "apply" in a dates table) can't tell
+    # passages apart; rare ones ("mca") decide. Words found side by side as in the
+    # question ("computer science") count again.
+    weights = {t: math.log(len(lows) / df) for t in set(terms) if (df := sum(t in low for low in lows))}
+    pairs = [(a, b) for a, b in zip(terms, terms[1:]) if a in weights and b in weights]
+    def score(i):
+        return (sum(w * min(lows[i].count(t), 3) for t, w in weights.items())
+                + sum(weights[a] + weights[b] for a, b in pairs if f"{a} {b}" in lows[i]))
+    slots = budget // 700 - 1
+    keep = {0} | {i for i in sorted(range(1, len(pieces)), key=score, reverse=True)[:slots] if score(i)}
+    if len(keep) == 1:   # nothing matched: the top of the page, where the newest notices are
+        keep = set(range(min(len(pieces), slots + 1)))
+    return " … ".join(pieces[i].strip() for i in sorted(keep))
+
+
+async def read_live(urls: list) -> dict:
+    """url -> current page text, for the pages that could be read (cached 15 min)."""
+    out, todo, now = {}, [], time.time()
+    for url in urls:
+        hit = _live_cache.get(url)
+        if hit and now - hit[0] < (LIVE_TTL if hit[1] else LIVE_FAIL_TTL):
+            if hit[1]:
+                out[url] = hit[1]
+        else:
+            todo.append(url)
+    if todo:
+        async def fetch(client, url):
+            try:
+                r = await client.get(url)
+                # Redirects are followed, but only to SJU's own site.
+                if r.status_code == 200 and SJU_URL.match(str(r.url)) and "html" in r.headers.get("content-type", ""):
+                    return page_text(r.text)
+                print(f"Live {url}: HTTP {r.status_code} {r.url}")
+            except httpx.HTTPError as e:
+                print(f"Live {url}: {type(e).__name__}")
+            return None
+        started = time.monotonic()
+        async with httpx.AsyncClient(timeout=httpx.Timeout(3.0, connect=2.0), follow_redirects=True,
+                                     headers={"User-Agent": "Mozilla/5.0 (compatible; SJU-Assistant)"}) as client:
+            texts = await asyncio.gather(*(fetch(client, u) for u in todo))
+        if len(_live_cache) > 300:   # ponytail: crude cap, swap for an LRU if pages ever churn
+            _live_cache.clear()
+        for url, text in zip(todo, texts):
+            _live_cache[url] = (time.time(), text)
+            if text:
+                out[url] = text
+        print(f"Live: read {sum(t is not None for t in texts)}/{len(todo)} pages in {time.monotonic() - started:.1f}s")
+    return out
+
+
+async def gather_context(question: str) -> str:
+    """Knowledge-base matches plus the live official pages, as one block for the prompt."""
+    words = set(re.findall(r"[a-z0-9]+", question.lower()))
+    pages = ([DATES_PAGE] if words & TIME_WORDS else []) + ([NEWS_PAGE] if words & NEWS_WORDS else [])
+    # The Supabase client is synchronous; run it off the event loop so other students'
+    # answers keep streaming, and read the live pages meanwhile. Other pages aren't
+    # re-read live: the knowledge base is re-scraped daily, and dates and notices are
+    # what changes within a day.
+    rows, live = await asyncio.gather(asyncio.to_thread(search_kb, question), read_live(pages))
+
+    # Passages are picked by what the question is about ("mca"), not by the words that
+    # chose the page ("last date to apply"), which every row of the dates table shares.
+    terms = [w for w in re.findall(r"[a-z0-9]+", expand(question).lower())
+             if len(w) > 2 and w not in STOP_WORDS | TIME_WORDS | NEWS_WORDS]
+    titles = {r.get("source_url"): r.get("page_name") for r in rows}
+    parts = []
+    if live:
+        parts.append("=== LIVE FROM THE OFFICIAL SJU WEBSITE (read just now - the newest information; "
+                     "if anything below disagrees, trust this) ===\n" + "\n\n".join(
+                         f"[{PAGE_TITLES.get(url) or titles.get(url) or url}] (source: {url})\n{relevant(text, terms)}"
+                         for url, text in live.items()))
+    stored = [r for r in rows if r.get("source_url") not in live]
+    if stored:
+        parts.append("=== STORED CONTENT FROM THE SJU WEBSITE (refreshed daily; quote exact figures and "
+                     "link the source URL) ===\n" + "\n\n".join(
+                         f"[{r.get('page_name', '')}] (source: {r.get('source_url', '')})\n{r['content'][:2000]}"
+                         for r in stored))
+    return "\n\n".join(parts)
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -446,11 +591,14 @@ async def answer_stream(req: ChatRequest):
     prev_user_msg = next((m.content for m in reversed(history) if m.role == "user"), None)
     search_query = f"{prev_user_msg} {q}" if prev_user_msg and prev_user_msg != q else q
 
-    # The Supabase client is synchronous; run it off the event loop so other
-    # students' answers keep streaming meanwhile.
-    extra = await asyncio.to_thread(search_supabase, search_query)
+    try:
+        extra = await gather_context(search_query)
+    except Exception as e:   # a page changed shape, say - still answer from the knowledge base
+        print(f"Context error: {type(e).__name__}: {e}")
+        extra = ""
     body = {
-        "system_instruction": {"parts": [{"text": SYSTEM_PROMPT.format(extra=extra)}]},
+        "system_instruction": {"parts": [{"text": SYSTEM_PROMPT.format(
+            extra=extra, today=datetime.now(IST).strftime("%A, %d %B %Y"))}]},
         "contents": contents,
     }
     try:
