@@ -294,7 +294,7 @@ function fmt(t){
     .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
     .replace(/\*\*/g,'')   // a bold whose closing ** hasn't streamed in yet
     .replace(/^#{1,6}[ \t]+(.*)$/gm,'<strong>$1</strong>')   // "### Fees" heading
-    .replace(/^[ \t]*[*-][ \t]+/gm,'• ')                     // "*   item" bullet
+    .replace(/^([ \t]*)[*-][ \t]+/gm,(m,sp)=>'&nbsp;'.repeat(sp.length*2)+'• ')   // "*   item" bullet, nested ones indented
     .replace(/\*(\S(?:[^*\n]*\S)?)\*/g,'<em>$1</em>')         // "*fees may change*"
     .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)"'<>]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
     .replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');

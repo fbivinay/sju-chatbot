@@ -232,7 +232,7 @@ RULES:
 3. For fees: if the SJU CONTENT above contains a fee table or figures, quote the EXACT amounts (category-wise and year-wise, e.g. Karnataka/Non-Karnataka/NRI). Do NOT invent or round to a vague range. Add one short line that fees may change yearly - confirm at admissions.sju.edu.in.
 4. If the SJU CONTENT above contains names, dates, or details, USE them (e.g. the Dean's or faculty names). Only say you don't have something when it is genuinely absent from the content above - then point to the right page or phone number.
 5. If student says "yes", "tell me more", "go on" - continue the previous topic.
-6. Use bullet points for lists. Keep answers under 250 words. Be friendly and warm.
+6. Use bullet points for lists - NEVER Markdown tables, the chat window can't display them; give fee figures as bullets (one line per category or year). Keep answers under 250 words. Be friendly and warm.
 7. NEVER just say "I couldn't find that" for common topics - you HAVE the information, use it.
 8. When your answer draws on the SJU CONTENT above, cite its source URL as a Markdown link, e.g. [MSc Big Data Analytics](https://www.sju.edu.in/programmes/msc-in-big-data-analytics).
 
