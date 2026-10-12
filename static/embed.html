@@ -146,7 +146,17 @@ function matchCourses(text){
     loose.push(c);
     if(cSubj.every(t=>q.has(t))) exact.push(c);
   }
+  if(!loose.length){
+    // No subject words, just a degree: "MCA", "BBA", "B.Com" name that degree's main programme.
+    const named=degrees.map(degreeProgramme).filter(Boolean);
+    return {exact:named, loose:named};
+  }
   return {exact:exact, loose:loose};
+}
+// The programme that spells its degree out - "BCA (Bachelor of Computer Applications)",
+// not "BCA (Data Analytics)" - is what the bare abbreviation means.
+function degreeProgramme(deg){
+  return allCourses().find(c=>coreTokens(c.name).includes(deg) && /\((bachelor|master) of /i.test(c.name));
 }
 let isOpen = false, sdIndex = -1;
 

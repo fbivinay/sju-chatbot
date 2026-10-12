@@ -15,7 +15,6 @@ import time
 from datetime import datetime, timedelta, timezone
 import httpx
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
@@ -26,9 +25,24 @@ try:
 except Exception:
     create_client = None
 
+# No CORS: the chat UI calls the API from this app's own origin, so a browser on any
+# other website can't use the API to spend the Gemini quota.
 app = FastAPI()
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# The chat UI (static/embed.html) may only be framed by SJU's own sites and this app's
+# demo page; anywhere else browsers show an empty frame. Add a domain here if the
+# university ever hosts the widget somewhere else.
+FRAME_ANCESTORS = "frame-ancestors 'self' https://sju.edu.in https://*.sju.edu.in"
+
+
+class SJUStaticFiles(StaticFiles):
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Content-Security-Policy"] = FRAME_ANCESTORS
+        return response
+
+
+app.mount("/static", SJUStaticFiles(directory="static"), name="static")
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")

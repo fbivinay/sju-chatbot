@@ -133,9 +133,13 @@ That is the whole integration. `widget.js` adds a floating button and opens
 To put the widget on every page at once, add the tag to the site's shared
 footer include (e.g. `footer.php`) rather than to each page.
 
-**Before going live**, restrict who may frame the app by returning
-`Content-Security-Policy: frame-ancestors https://*.sju.edu.in` from
-`main.py`; otherwise any site can embed the widget and spend the Gemini quota.
+**Only SJU's sites can embed it.** The chat UI is served with
+`Content-Security-Policy: frame-ancestors 'self' https://sju.edu.in https://*.sju.edu.in`
+(`FRAME_ANCESTORS` in `main.py`), so any other website that adds the tag gets an
+empty frame, and the API sends no CORS headers, so other sites' pages can't call
+it from a browser either. If the university hosts the widget on another domain,
+add it to `FRAME_ANCESTORS`. (Scripts outside a browser can still reach the API —
+the Gemini rate limits and model rotation are the backstop there.)
 
 `static/embed.html` is the chat UI itself, and `static/index.html` (the demo
 site clone) loads it through the very same `widget.js` — one copy of the chat
@@ -204,5 +208,6 @@ export GEMINI_API_KEY=...   SUPABASE_URL=...   SUPABASE_KEY=...
 uvicorn main:app --reload
 # open http://localhost:8000
 
-python test_chat.py   # offline checks: model rotation + live page reading
+python test_chat.py   # offline checks: model rotation, live page reading, embedding lock
+node test_widget.js   # offline check: which programme the option cards point at
 ```

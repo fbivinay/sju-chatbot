@@ -236,3 +236,18 @@ finally:
     main.search_kb = real_search
 
 print("live pages OK")
+
+
+# ── Embedding: only SJU's sites may frame the chat UI or use the API from a browser ──
+from fastapi.testclient import TestClient  # noqa: E402
+
+client = TestClient(main.app)
+page = client.get("/static/embed.html")
+assert page.status_code == 200
+assert page.headers["content-security-policy"] == "frame-ancestors 'self' https://sju.edu.in https://*.sju.edu.in"
+preflight = client.options("/chat/stream", headers={"Origin": "https://evil.example",
+                                                    "Access-Control-Request-Method": "POST",
+                                                    "Access-Control-Request-Headers": "content-type"})
+assert "access-control-allow-origin" not in preflight.headers
+
+print("embedding OK")
