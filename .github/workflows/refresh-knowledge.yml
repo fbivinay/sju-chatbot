@@ -40,3 +40,17 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           MIN_RATIO: ${{ inputs.min_ratio || '0.6' }}
           PYTHONUNBUFFERED: "1"
+
+  # GitHub switches off scheduled workflows in a public repo after 60 days without
+  # commits; the daily scrape is also what keeps Supabase from pausing. Re-enabling
+  # this workflow on every run resets that 60-day clock, even when the scrape fails.
+  keepalive:
+    needs: refresh
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - run: gh workflow enable refresh-knowledge.yml -R "$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ github.token }}
