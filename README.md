@@ -5,7 +5,9 @@ programmes, admissions, fees, campus, and more. A FastAPI backend serves a
 single-page website clone of sju.edu.in with an embedded chat widget, powered by
 Google Gemini and grounded in real content scraped from the university site.
 
-Live demo: https://sju-chatbot.vercel.app (deployed to Vercel as a Python serverless function).
+Live demo: https://sju-chatbot.vercel.app (laptop or desktop only; deployed to Vercel as a Python serverless function).
+
+![The demo page with the assistant answering a question about MSc programmes](docs/screenshot.png)
 
 ---
 
