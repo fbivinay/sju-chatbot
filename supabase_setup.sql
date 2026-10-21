@@ -98,18 +98,33 @@ revoke all on public.sju_rate_limit from anon, authenticated;
 -- Atomically roll the minute/day windows, count this hit, and say whether it's allowed.
 -- One row locked per IP (distinct IPs never contend). SECURITY DEFINER so the bot's
 -- publishable key can run it without direct table access.
-create or replace function public.sju_rate_check(p_ip text, p_max_min int, p_max_day int)
+--
+-- The limits are CONSTANTS here, not parameters: a caller (anyone holding the
+-- publishable key) must not be able to pass its own huge cap and bypass the limit.
+-- p_ip is validated to an IP/CIDR shape so a stray caller can't fill the table with
+-- junk keys. Malformed input is treated as blocked (safe default; the app never
+-- sends it). This keeps the function callable by the app's publishable key. For a
+-- stricter posture, restrict the grant to service_role and call it with the secret key.
+drop function if exists public.sju_rate_check(text, int, int);
+create or replace function public.sju_rate_check(p_ip text)
 returns boolean
 language plpgsql
 security definer
 set search_path = ''
 as $$
 declare
+  max_min constant int := 15;    -- keep in sync with RATE_MAX in main.py
+  max_day constant int := 300;   -- keep in sync with RATE_DAY_MAX in main.py
   r      public.sju_rate_limit%rowtype;
   now_ts timestamptz := now();
   today  date := (now() at time zone 'utc')::date;
   ok     boolean;
 begin
+  if p_ip is null or length(p_ip) > 64
+     or (p_ip not in ('invalid', 'unknown')
+         and p_ip !~ '^[0-9a-fA-F:.]+(/[0-9]{1,3})?$') then
+    return false;   -- not an IP/CIDR/sentinel: reject without creating a row
+  end if;
   insert into public.sju_rate_limit(ip) values (p_ip) on conflict (ip) do nothing;
   select * into r from public.sju_rate_limit where ip = p_ip for update;
   if now_ts - r.minute_start >= interval '60 seconds' then
@@ -118,7 +133,7 @@ begin
   if r.day <> today then
     r.day := today; r.day_count := 0;
   end if;
-  ok := r.minute_count < p_max_min and r.day_count < p_max_day;
+  ok := r.minute_count < max_min and r.day_count < max_day;
   if ok then
     r.minute_count := r.minute_count + 1;
     r.day_count := r.day_count + 1;
@@ -127,12 +142,13 @@ begin
      set minute_start = r.minute_start, minute_count = r.minute_count,
          day = r.day, day_count = r.day_count
    where ip = p_ip;
-  -- occasionally sweep rows idle for over a day, so the table can't grow forever
+  -- occasionally sweep rows idle for over a day, so the table can't grow forever.
+  -- ponytail: random sweep; a scheduled job (pg_cron) would be tidier if it ever matters.
   if random() < 0.005 then
     delete from public.sju_rate_limit
      where day < today and minute_start < now_ts - interval '1 day';
   end if;
   return ok;
 end $$;
-revoke execute on function public.sju_rate_check(text, int, int) from public;
-grant  execute on function public.sju_rate_check(text, int, int) to anon, authenticated, service_role;
+revoke execute on function public.sju_rate_check(text) from public;
+grant  execute on function public.sju_rate_check(text) to anon, authenticated, service_role;

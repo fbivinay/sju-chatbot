@@ -397,8 +397,7 @@ main.sb = _FakeSB(True)
 assert rl.post("/chat", json={"question": ""}, headers=g).status_code == 200      # DB says allow
 main.sb = _FakeSB(False)
 assert rl.post("/chat", json={"question": ""}, headers=g).status_code == 429      # DB says block
-assert main.sb.calls[0] == ("sju_rate_check", {"p_ip": "203.0.113.200",
-                                               "p_max_min": main.RATE_MAX, "p_max_day": main.RATE_DAY_MAX})
+assert main.sb.calls[0] == ("sju_rate_check", {"p_ip": "203.0.113.200"})   # no caller-set limits
 # DB unreachable -> fall back to the in-memory limit, never crash.
 class _BrokenSB:
     def rpc(self, *a, **k): raise RuntimeError("db down")

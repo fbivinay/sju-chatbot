@@ -772,10 +772,10 @@ def client_ip(request: Request) -> str:
 
 
 def _global_allow(ip: str) -> bool:
-    # Authoritative cross-instance counter in Supabase. Raises if the function isn't
-    # there yet or the DB is unreachable - the caller then falls back to in-memory.
-    return bool(sb.rpc("sju_rate_check",
-                       {"p_ip": ip, "p_max_min": RATE_MAX, "p_max_day": RATE_DAY_MAX}).execute().data)
+    # Authoritative cross-instance counter in Supabase. The limits live inside the
+    # function (constants), not here, so a caller can't pass its own cap. Raises if the
+    # function isn't there yet or the DB is unreachable - caller falls back to in-memory.
+    return bool(sb.rpc("sju_rate_check", {"p_ip": ip}).execute().data)
 
 
 async def rate_limited(request: Request) -> bool:
