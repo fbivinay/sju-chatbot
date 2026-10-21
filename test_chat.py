@@ -368,6 +368,10 @@ def ip_of(raw):
 assert ip_of("2001:db8:1:2:aaaa::1") == ip_of("2001:db8:1:2:bbbb::9") == "2001:db8:1:2::/64"
 assert ip_of("2001:db8::1") == ip_of("2001:db8:0:0:ffff::9") == "2001:db8::/64"   # "::" compression
 assert ip_of("not-an-ip") == "invalid" and ip_of("") == "unknown"
+# IPv4-mapped IPv6 keys on the embedded host (not one shared ::/64 bucket).
+assert ip_of("::ffff:1.2.3.4") == ip_of("1.2.3.4") == "1.2.3.4"
+assert ip_of("::ffff:1.2.3.4") != ip_of("::ffff:5.6.7.8")   # distinct clients don't collide
+assert ip_of("2002:0102:0304::1") == "1.2.3.4"              # 6to4 embeds the IPv4
 
 # /health hides per-model quota unless the token matches
 main.HEALTH_TOKEN = ""

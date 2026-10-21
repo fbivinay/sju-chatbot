@@ -760,7 +760,15 @@ def client_ip(request: Request) -> str:
         addr = ipaddress.ip_address(raw)
     except ValueError:
         return "invalid"   # one shared bucket for anything unparseable
-    return str(ipaddress.ip_network(f"{addr}/64", strict=False)) if addr.version == 6 else str(addr)
+    if addr.version == 6:
+        # IPv4-mapped/6to4/Teredo addresses carry a real IPv4 host; /64-bucketing them
+        # collapses the whole embedded IPv4 space into one bucket, so distinct clients
+        # would collide. Key on the embedded IPv4 instead; only true IPv6 gets /64.
+        embedded = addr.ipv4_mapped or addr.sixtofour or (addr.teredo[1] if addr.teredo else None)
+        if embedded is None:
+            return str(ipaddress.ip_network(f"{addr}/64", strict=False))
+        addr = embedded
+    return str(addr)
 
 
 def rate_limited(request: Request) -> bool:
