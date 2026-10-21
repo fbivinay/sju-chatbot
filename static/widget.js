@@ -30,7 +30,6 @@
     '#sjuHello{position:fixed;right:142px;bottom:52px;max-width:320px;padding:18px 24px;background:rgba(255,255,255,.88);-webkit-backdrop-filter:blur(14px) saturate(160%);backdrop-filter:blur(14px) saturate(160%);border:1px solid rgba(255,255,255,.9);border-radius:24px 24px 6px 24px;box-shadow:0 14px 40px rgba(10,35,64,.22);font:500 17px/1.45 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;color:#33415c;cursor:pointer;z-index:2147482999;opacity:0;transform:translateY(10px) scale(.92);transform-origin:bottom right;pointer-events:none;transition:opacity .4s ease,transform .5s cubic-bezier(.2,1.4,.4,1)}',
     '#sjuHello.show{opacity:1;transform:none;pointer-events:all}',
     '#sjuHello b{display:block;font-size:22px;font-weight:800;color:#0a2340;letter-spacing:-.01em;margin-bottom:4px}',
-    '#sjuHello b span{background:linear-gradient(135deg,#d4a72c,#b8860b);-webkit-background-clip:text;background-clip:text;color:transparent}',
     '@media(prefers-reduced-motion:reduce){#sjuFab,#sjuFab::before{animation:none}}',
     // frosted glass: the iframe is transparent and blurs whatever page sits behind it.
     // color-scheme must match embed.html or Chrome paints the frame opaque.
@@ -44,7 +43,7 @@
   var hello = document.createElement('div');
   hello.id = 'sjuHello';
   hello.setAttribute('role', 'button');
-  hello.innerHTML = '<b>Hey, I’m <span>Joey</span> 👋</b>Ask me anything about SJU!';
+  hello.innerHTML = '<b>Hey, I’m Joey</b>Ask me anything about SJU!';
 
   var fab = document.createElement('button');
   fab.id = 'sjuFab';

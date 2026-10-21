@@ -1,9 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
   <!-- Joey, the SJU Assistant: an owl in SJU navy and gold -->
   <defs>
+    <!-- warm gold disc, so Joey stands out on SJU's navy pages -->
     <radialGradient id="bg" cx=".35" cy=".3" r=".9">
-      <stop offset="0" stop-color="#1b4f96"/>
-      <stop offset="1" stop-color="#0a2340"/>
+      <stop offset="0" stop-color="#ffe9a3"/>
+      <stop offset=".55" stop-color="#f3c845"/>
+      <stop offset="1" stop-color="#d99a1e"/>
     </radialGradient>
     <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#f9e08a"/>
@@ -42,10 +44,10 @@
   </g>
   <!-- graduation cap -->
   <path d="M45 41 L45 48 Q60 55 75 48 L75 41 Z" fill="#0a2340"/>
-  <path d="M60 25 L88 36 L60 47 L32 36 Z" fill="#0f2f57" stroke="url(#gold)" stroke-width="1.6" stroke-linejoin="round"/>
-  <path d="M60 36 L84 38 L84 50" stroke="url(#gold)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-  <circle cx="84" cy="52" r="2.6" fill="url(#gold)"/>
-  <circle cx="60" cy="36" r="2" fill="url(#gold)"/>
-  <!-- gold rim -->
-  <circle cx="60" cy="60" r="57" fill="none" stroke="url(#gold)" stroke-width="3"/>
+  <path d="M60 25 L88 36 L60 47 L32 36 Z" fill="#0f2f57" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M60 36 L84 38 L84 50" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <circle cx="84" cy="52" r="2.6" fill="#fff"/>
+  <circle cx="60" cy="36" r="2" fill="#fff"/>
+  <!-- white rim -->
+  <circle cx="60" cy="60" r="57" fill="none" stroke="#fff" stroke-width="3.5"/>
 </svg>
