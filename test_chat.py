@@ -38,13 +38,15 @@ def skipped_for(model):
     return main._skip_until[model] - time.time()
 
 
-def ask(responses):
+def ask(responses, sent=None):
     """responses: model -> (status, body) or an exception. Returns (answer, models called)."""
     called = []
 
     def handler(request):
         model = request.url.path.split("/models/")[1].split(":")[0]
         called.append(model)
+        if sent is not None:
+            sent.append(json.loads(request.content))
         r = responses.get(model, (503, "{}"))
         if isinstance(r, Exception):
             raise r
@@ -111,37 +113,35 @@ main._recent[M[GEMMA]] = [(time.time(), 15_990)]
 assert ask({M[GEMMA]: (200, sse("A")), M[GEMMA + 1]: (200, sse("B"))}) == ("B", [M[GEMMA + 1]])
 
 # A stream that breaks midway - dropped connection or a 503 "high demand" error chunk -
-# tells the browser to restart, and the next model answers in full.
+# hands the half answer to the next model, which carries on from there: one answer, no retyping.
 MID_503 = sse("Half an ") + "data: " + json.dumps({"error": {"code": 503}}) + "\n\n"
-for broken in (Dropped(), MID_503):
+for broken, bench in ((Dropped(), 20), (MID_503, 300)):
     reset()
-    answer, called = ask({M[0]: (200, broken), M[1]: (200, sse("Whole answer"))})
-    assert (answer, called) == ("Half an " + main.RESTART + "Whole answer", M[:2]), answer
-    assert 15 < skipped_for(M[0]) <= 20
+    sent = []
+    answer, called = ask({M[0]: (200, broken), M[1]: (200, sse("answer."))}, sent)
+    assert (answer, called) == ("Half an answer.", M[:2]), answer
+    assert sent[1]["contents"][-2:] == [{"role": "model", "parts": [{"text": "Half an "}]},
+                                        {"role": "user", "parts": [{"text": main.CONTINUE}]}]
+    assert bench - 5 < skipped_for(M[0]) <= bench
 
-# No model finishes: the half answer comes back once, marked as cut short.
+# A half-finished word is held back, so the next model continues from a clean break.
+reset()
+sent = []
+answer, _ = ask({M[0]: (200, sse("Half an ans") + "data: " + json.dumps({"error": {"code": 503}}) + "\n\n"),
+                 M[1]: (200, sse("answer."))}, sent)
+assert answer == "Half an answer." and sent[1]["contents"][-2]["parts"][0]["text"] == "Half an "
+
+# An error after the model said it was done changes nothing.
+reset()
+DONE_THEN_503 = ("data: " + json.dumps({"candidates": [{"content": {"parts": [{"text": "All of it."}]},
+                                                         "finishReason": "STOP"}]}) + "\n\n"
+                 + "data: " + json.dumps({"error": {"code": 503}}) + "\n\n")
+assert ask({M[0]: (200, DONE_THEN_503)}) == ("All of it.", [M[0]])
+
+# No model finishes: the half answer stays, marked as cut short.
 reset()
 answer, called = ask({M[0]: (200, Dropped())})
-assert called == M and answer.split(main.RESTART)[-1].startswith("Half an ") and "cut short" in answer
-
-# The whole-answer endpoint drops the half answer before a restart.
-reset()
-real_gather = main.gather_context
-async def no_context(q): return ""
-main.gather_context = no_context
-try:
-    handler_responses = {M[0]: (200, Dropped()), M[1]: (200, sse("Whole answer"))}
-    real = httpx.AsyncClient
-    def handler(request):
-        r = handler_responses.get(request.url.path.split("/models/")[1].split(":")[0], (503, "{}"))
-        return httpx.Response(r[0], stream=r[1]) if isinstance(r[1], httpx.AsyncByteStream) else httpx.Response(r[0], text=r[1])
-    httpx.AsyncClient = lambda **kw: real(transport=httpx.MockTransport(handler), **kw)
-    try:
-        assert asyncio.run(main.chat(main.ChatRequest(question="hi"))) == {"answer": "Whole answer"}
-    finally:
-        httpx.AsyncClient = real
-finally:
-    main.gather_context = real_gather
+assert called == M and answer.startswith("Half an ") and answer.endswith("cut short - please ask again.)")
 
 print("rotation OK")
 
