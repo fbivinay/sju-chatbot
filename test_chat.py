@@ -110,10 +110,38 @@ for model in M[:GEMMA]:
 main._recent[M[GEMMA]] = [(time.time(), 15_990)]
 assert ask({M[GEMMA]: (200, sse("A")), M[GEMMA + 1]: (200, sse("B"))}) == ("B", [M[GEMMA + 1]])
 
-# A stream that breaks midway keeps the partial answer and says so.
+# A stream that breaks midway - dropped connection or a 503 "high demand" error chunk -
+# tells the browser to restart, and the next model answers in full.
+MID_503 = sse("Half an ") + "data: " + json.dumps({"error": {"code": 503}}) + "\n\n"
+for broken in (Dropped(), MID_503):
+    reset()
+    answer, called = ask({M[0]: (200, broken), M[1]: (200, sse("Whole answer"))})
+    assert (answer, called) == ("Half an " + main.RESTART + "Whole answer", M[:2]), answer
+    assert 15 < skipped_for(M[0]) <= 20
+
+# No model finishes: the half answer comes back once, marked as cut short.
 reset()
 answer, called = ask({M[0]: (200, Dropped())})
-assert called == [M[0]] and answer.startswith("Half an ") and "connection dropped" in answer
+assert called == M and answer.split(main.RESTART)[-1].startswith("Half an ") and "cut short" in answer
+
+# The whole-answer endpoint drops the half answer before a restart.
+reset()
+real_gather = main.gather_context
+async def no_context(q): return ""
+main.gather_context = no_context
+try:
+    handler_responses = {M[0]: (200, Dropped()), M[1]: (200, sse("Whole answer"))}
+    real = httpx.AsyncClient
+    def handler(request):
+        r = handler_responses.get(request.url.path.split("/models/")[1].split(":")[0], (503, "{}"))
+        return httpx.Response(r[0], stream=r[1]) if isinstance(r[1], httpx.AsyncByteStream) else httpx.Response(r[0], text=r[1])
+    httpx.AsyncClient = lambda **kw: real(transport=httpx.MockTransport(handler), **kw)
+    try:
+        assert asyncio.run(main.chat(main.ChatRequest(question="hi"))) == {"answer": "Whole answer"}
+    finally:
+        httpx.AsyncClient = real
+finally:
+    main.gather_context = real_gather
 
 print("rotation OK")
 

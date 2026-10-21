@@ -506,11 +506,19 @@ def _skip(model: str, seconds: float, why: str):
     print(f"Gemini {model}: {why} - skipping it for {seconds:.0f}s")
 
 
+RESTART = "\x00restart"   # tells the browser to throw away the half answer shown so far
+
+
 async def gemini_stream(body: dict):
-    """Stream the answer from the first model that can take this request."""
+    """Stream the answer from the first model that can take this request.
+
+    A model can fail halfway through ("high demand" 503 mid-stream). Then the next
+    model answers from scratch, after a RESTART so the browser drops the half answer.
+    """
     tokens = len(json.dumps(body)) // 3   # measured ~3.6 chars per token; errs high
-    deadline = time.monotonic() + 30
+    deadline = time.monotonic() + 60
     tried, rejected = set(), []
+    partial = ""   # longest half answer, shown if no model manages a whole one
     async with httpx.AsyncClient() as client:
         while pick := _pick(tokens, tried):
             model, wait, thinking = pick
@@ -519,10 +527,11 @@ async def gemini_stream(body: dict):
             if left < 2:
                 print("Gemini: out of time before any model answered")
                 break
-            payload = {**body, "generationConfig": {"maxOutputTokens": 800, "temperature": 0.3,
+            # thinking tokens count toward maxOutputTokens, so leave plenty of room
+            payload = {**body, "generationConfig": {"maxOutputTokens": 2048, "temperature": 0.3,
                                                     "thinkingConfig": {"thinkingLevel": thinking}}}
             started = time.monotonic()
-            answered = False
+            answered, broke, text = False, False, ""
             try:
                 # Key in a header, not the URL - httpx logs request URLs to Vercel logs.
                 async with client.stream("POST", GEMINI_URL.format(model), json=payload,
@@ -554,27 +563,33 @@ async def gemini_stream(body: dict):
                             continue
                         chunk = json.loads(line[6:])
                         if "error" in chunk:
-                            print(f"Gemini {model}: error mid-stream {chunk['error']}")
+                            _skip(model, 20, f"error mid-stream {chunk['error']}")
+                            broke = True
                             break
-                        for part in (chunk.get("candidates") or [{}])[0].get("content", {}).get("parts", []):
+                        cand = (chunk.get("candidates") or [{}])[0]
+                        for part in cand.get("content", {}).get("parts", []):
                             if part.get("text") and not part.get("thought"):
                                 if not answered:
                                     print(f"Gemini {model}: first words after {time.monotonic() - started:.1f}s")
                                 answered = True
+                                text += part["text"]
                                 yield part["text"]
+                        if cand.get("finishReason") not in (None, "STOP"):
+                            print(f"Gemini {model}: stopped early - {cand['finishReason']}")
             except httpx.HTTPError as e:   # timed out or connection dropped
-                if answered:
-                    print(f"Gemini {model}: stream broke - {type(e).__name__}")
-                    yield "\n\n(The connection dropped - please ask again.)"
-                    return
-                _skip(model, 20, f"no answer - {type(e).__name__}")
-                continue
-            if answered:
+                _skip(model, 20, f"{'stream broke' if answered else 'no answer'} - {type(e).__name__}")
+                broke = True
+            if answered and not broke:
                 for m in rejected:
                     _skip(m, 600, "rejected a request another model answered")
                 return
-            print(f"Gemini {model}: empty answer")
-    yield BUSY_MSG
+            if answered:   # half an answer on screen - start over with the next model
+                partial = max(partial, text, key=len)
+                yield RESTART
+                continue
+            if not broke:
+                print(f"Gemini {model}: empty answer")
+    yield partial + "\n\n(The answer was cut short - please ask again.)" if partial else BUSY_MSG
 
 
 class Message(BaseModel):
@@ -627,7 +642,7 @@ async def answer_stream(req: ChatRequest):
 async def chat_stream(req: ChatRequest):
     async def events():
         async for text in answer_stream(req):
-            yield f"data: {json.dumps(text)}\n\n"
+            yield "event: restart\ndata: \n\n" if text is RESTART else f"data: {json.dumps(text)}\n\n"
     return StreamingResponse(events(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
@@ -636,7 +651,13 @@ async def chat_stream(req: ChatRequest):
 # the pre-streaming embed.html in its cache.
 @app.post("/chat")
 async def chat(req: ChatRequest):
-    return {"answer": "".join([text async for text in answer_stream(req)])}
+    parts = []
+    async for text in answer_stream(req):
+        if text is RESTART:
+            parts.clear()
+        else:
+            parts.append(text)
+    return {"answer": "".join(parts)}
 
 
 @app.get("/health")
