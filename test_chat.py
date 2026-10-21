@@ -306,3 +306,25 @@ with tempfile.TemporaryDirectory() as d:
     assert cached.get("/s/embed.html", headers={"If-None-Match": new.headers["etag"]}).status_code == 304
 
 print("caching OK")
+
+
+# ── Answer guards ───────────────────────────────────────────────────────────────
+from datetime import date  # noqa: E402
+
+# Past dates are tagged before the model sees them ("Cycle 3: 31 May 2026" was "upcoming" in October).
+today = date(2026, 10, 22)
+assert main.mark_passed("Cycle 3: Last Date to Apply: 31 May 2026.", today) == "Cycle 3: Last Date to Apply: 31 May 2026 (passed)."
+assert main.mark_passed("Apply by 5th January 2027, interview 22 Oct 2026", today) == "Apply by 5th January 2027, interview 22 Oct 2026"
+assert main.mark_passed("21 October 2026 and 31 February 2026", today) == "21 October 2026 (passed) and 31 February 2026"
+
+# Links the model makes up are dropped; links in the prompt (in any spelling) stay.
+allowed = main.known_urls("see sju.edu.in/faq.php and https://www.sju.edu.in/programmes/msc-in-big-data-analytics")
+keep = "[FAQ](https://www.sju.edu.in/faq) "
+assert main.drop_unknown_links(keep, allowed) == keep
+assert main.drop_unknown_links("[MSc BDA](http://sju.edu.in/programmes/msc-in-big-data-analytics/) ", allowed).endswith("analytics/) ")
+assert main.drop_unknown_links("[Report format](https://www.sju.edu.in/pg-project-report-format.pdf). ", allowed) == "[Report format]. "
+
+# The AI gets the same programme list - and counts - as the chat's UG/PG buttons.
+assert "Undergraduate - 40 programmes:" in main.KNOWLEDGE and "PhD - 13 programmes:" in main.KNOWLEDGE
+
+print("answer guards OK")

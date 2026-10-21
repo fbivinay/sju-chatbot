@@ -255,11 +255,33 @@ Note: fees change each year and vary by specialisation. These are approximate ra
 - Fee refund policy: available on the SJU website
 """
 
+def official_programmes() -> str:
+    """The programme list behind the chat's UG/PG/PG Diploma/PhD buttons (static/embed.html),
+    so the AI's counts and names match what the student can pick from."""
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "embed.html"),
+                  encoding="utf-8") as f:
+            page = f.read()
+        block = page[page.index("const PROGRAMMES = {"):]
+        block = block[:block.index("\n};")]
+    except (OSError, ValueError) as e:
+        print(f"Programme list unavailable: {e}")
+        return ""
+    names = {"UG": "Undergraduate", "PG": "Postgraduate", "PGD": "PG Diploma", "PHD": "PhD"}
+    lines = [f"{names.get(level, level)} - {len(found)} programmes: " + "; ".join(found)
+             for level, body in re.findall(r"\n  ([A-Z]+): \[(.*?)\n  \]", block, re.S)
+             if (found := re.findall(r'C\("([^"]+)"', body))]
+    return ("\n\n=== OFFICIAL PROGRAMME LIST (the exact programmes and counts - use these numbers "
+            "for 'how many' questions) ===\n" + "\n".join(lines)) if lines else ""
+
+
+KNOWLEDGE += official_programmes()
+
 SYSTEM_PROMPT = """You are the official AI assistant for St Joseph's University (SJU), Bengaluru.
 You help students in a warm, friendly, helpful way - like a knowledgeable senior student.
 
-Today is {today} (India). Any deadline, test or event dated before today has already
-passed - say so plainly, never present it as upcoming.
+Today is {today} (India). Dates in the content below that are already over are marked
+"(passed)". Say plainly that those have passed; never call them upcoming, open or current.
 
 Use the SJU knowledge below to answer questions. The knowledge is accurate and comprehensive.
 
@@ -269,9 +291,9 @@ RULES:
 3. For fees: if the SJU website content contains a fee table or figures, quote the EXACT amounts (category-wise and year-wise, e.g. Karnataka/Non-Karnataka/NRI). Do NOT invent or round to a vague range. Add one short line that fees may change yearly - confirm at admissions.sju.edu.in.
 4. If the SJU website content contains names, dates, or details, USE them (e.g. the Dean's or faculty names).
 5. If student says "yes", "tell me more", "go on" - continue the previous topic.
-6. Use bullet points for lists - NEVER Markdown tables, the chat window can't display them; give fee figures as bullets (one line per category or year). Keep answers under 250 words. Be friendly and warm.
+6. Be SHORT. Put the direct answer in the first sentence. Then at most 5 bullets or 3 short sentences - about 100 words in all - unless the student asks for details or a full list. For "how many" questions, start with the number from the OFFICIAL PROGRAMME LIST (e.g. "SJU offers 40 undergraduate programmes."), then name a few and offer the full list. Use bullet points for lists - NEVER Markdown tables, the chat window can't display them; give fee figures as bullets (one line per category or year). Be friendly and warm.
 7. NEVER guess or invent specifics - fees, dates, deadlines, names, phone numbers, seat counts. If the content and knowledge below don't state it, say you couldn't confirm it right now and point to the right official page or 080-2227-4079. For general topics (courses, facilities, hostel, placements, admissions process) the knowledge base has the answer - use it confidently.
-8. When your answer draws on the SJU website content, cite its source URL as a Markdown link, e.g. [MSc Big Data Analytics](https://www.sju.edu.in/programmes/msc-in-big-data-analytics).
+8. When your answer draws on the SJU website content, cite its source URL as a Markdown link, e.g. [MSc Big Data Analytics](https://www.sju.edu.in/programmes/msc-in-big-data-analytics). Link ONLY to URLs written out in the content or knowledge below, copied exactly - never build, shorten or guess a URL. At most 2 links per answer.
 
 {extra}
 
@@ -426,6 +448,42 @@ async def read_live(urls: list) -> dict:
     return out
 
 
+MONTHS = {m: i for i, m in enumerate(
+    ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
+DATE = re.compile(r"\b(\d{1,2})(?:st|nd|rd|th)?\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?,?\s+(20\d\d)\b")
+
+
+def mark_passed(text: str, today=None) -> str:
+    """Tag every date already over with "(passed)". Told only today's date, the model
+    still called 31 May 2026 "upcoming" in October - so the comparison is done here."""
+    today = today or datetime.now(IST).date()
+    def tag(m):
+        try:
+            d = datetime(int(m[3]), MONTHS[m[2][:3].lower()], int(m[1])).date()
+        except ValueError:   # "31 February"
+            return m[0]
+        return f"{m[0]} (passed)" if d < today else m[0]
+    return DATE.sub(tag, text)
+
+
+def _url_key(url: str) -> str:
+    """http/https, www., .php, a trailing slash or #fragment don't make a different page."""
+    url = re.sub(r"^https?://(www\.)?", "", url.strip().lower()).split("#")[0].rstrip("/.")
+    return url[:-4] if url.endswith(".php") else url
+
+
+def known_urls(text: str) -> set:
+    return {_url_key(u) for u in re.findall(r"(?:https?://)?(?:[a-z0-9-]+\.)*sju\.edu\.in[^\s)\]\"'<>,;]*|https?://[^\s)\]\"'<>,;]+", text)}
+
+
+def drop_unknown_links(piece: str, allowed: set) -> str:
+    """[text](url) whose url isn't in the prompt becomes plain text - the model invents
+    plausible SJU paths that 404. Streamed pieces end at whitespace, so a URL is never
+    split across two pieces; the browser drops the leftover "[" of "[text]"."""
+    return re.sub(r"\]\((https?://[^)\s]+)\)",
+                  lambda m: m[0] if _url_key(m[1]) in allowed else "]", piece)
+
+
 async def gather_context(question: str) -> str:
     """Knowledge-base matches plus the live official pages, as one block for the prompt."""
     words = set(re.findall(r"[a-z0-9]+", question.lower()))
@@ -453,7 +511,7 @@ async def gather_context(question: str) -> str:
                      "link the source URL) ===\n" + "\n\n".join(
                          f"[{r.get('page_name', '')}] (source: {r.get('source_url', '')})\n{r['content'][:2000]}"
                          for r in stored))
-    return "\n\n".join(parts)
+    return mark_passed("\n\n".join(parts))
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -659,14 +717,13 @@ async def answer_stream(req: ChatRequest):
     except Exception as e:   # a page changed shape, say - still answer from the knowledge base
         print(f"Context error: {type(e).__name__}: {e}")
         extra = ""
-    body = {
-        "system_instruction": {"parts": [{"text": SYSTEM_PROMPT.format(
-            extra=extra, today=datetime.now(IST).strftime("%A, %d %B %Y"))}]},
-        "contents": contents,
-    }
+    system = SYSTEM_PROMPT.format(extra=extra, today=datetime.now(IST).strftime("%A, %d %B %Y"))
+    body = {"system_instruction": {"parts": [{"text": system}]}, "contents": contents}
+    allowed = known_urls(system)
     try:
         async for text in gemini_stream(body):
-            yield text
+            # the model copies the "(passed)" tag even when told not to; it's ours, not SJU's
+            yield drop_unknown_links(text, allowed).replace(" (passed)", "").replace("(passed)", "")
     except Exception as e:
         print(f"Error: {e}")
         yield "Something went wrong. Please try again or call SJU at 080-2227-4079."

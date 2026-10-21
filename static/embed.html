@@ -318,6 +318,7 @@ function fmt(t){
     .replace(/^([ \t]*)[*-][ \t]+/gm,(m,sp)=>'&nbsp;'.repeat(sp.length*2)+'• ')   // "*   item" bullet, nested ones indented
     .replace(/\*(\S(?:[^*\n]*\S)?)\*/g,'<em>$1</em>')         // "*fees may change*"
     .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)"'<>]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/\[([^\]\n]+)\](?!\(|$)/g,'$1')   // "[text]" whose made-up link the server removed
     .replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');
 }
 function usrMsg(text){
