@@ -771,10 +771,27 @@ def client_ip(request: Request) -> str:
     return str(addr)
 
 
-def rate_limited(request: Request) -> bool:
+def _global_allow(ip: str) -> bool:
+    # Authoritative cross-instance counter in Supabase. Raises if the function isn't
+    # there yet or the DB is unreachable - the caller then falls back to in-memory.
+    return bool(sb.rpc("sju_rate_check",
+                       {"p_ip": ip, "p_max_min": RATE_MAX, "p_max_day": RATE_DAY_MAX}).execute().data)
+
+
+async def rate_limited(request: Request) -> bool:
+    ip = client_ip(request)
+    if sb is not None:
+        try:
+            # off the event loop: the Supabase client is synchronous
+            return not await asyncio.to_thread(_global_allow, ip)
+        except Exception as e:
+            print(f"Rate-limit DB unavailable, using in-memory: {type(e).__name__}: {e}")
+    return _mem_rate_limited(ip)
+
+
+def _mem_rate_limited(ip: str) -> bool:
     now = time.time()
     day = int(now // 86400)
-    ip = client_ip(request)
     recent = [t for t in _rl.get(ip, []) if now - t < RATE_WINDOW]
     d, count = _rl_day.get(ip, (day, 0))
     if d != day:
@@ -799,7 +816,7 @@ TOO_MANY = "You're sending questions very fast. Please wait a minute and try aga
 
 @app.post("/chat/stream")
 async def chat_stream(req: ChatRequest, request: Request):
-    if rate_limited(request):
+    if await rate_limited(request):
         raise HTTPException(status_code=429, detail=TOO_MANY)
     async def events():
         async for text in answer_stream(req):
@@ -812,7 +829,7 @@ async def chat_stream(req: ChatRequest, request: Request):
 # the pre-streaming embed.html in its cache.
 @app.post("/chat")
 async def chat(req: ChatRequest, request: Request):
-    if rate_limited(request):
+    if await rate_limited(request):
         raise HTTPException(status_code=429, detail=TOO_MANY)
     return {"answer": "".join([text async for text in answer_stream(req)])}
 

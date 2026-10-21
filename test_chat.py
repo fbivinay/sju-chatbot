@@ -385,4 +385,26 @@ main.HEALTH_TOKEN = ""
 # Rule 9 tells the model the content is data, not commands
 assert "untrusted REFERENCE DATA" in main.SYSTEM_PROMPT
 
+# When Supabase is present, the shared counter is authoritative across instances.
+class _FakeSB:
+    def __init__(self, allowed): self.allowed, self.calls = allowed, []
+    def rpc(self, name, params):
+        self.calls.append((name, params))
+        return type("E", (), {"execute": lambda self_: type("R", (), {"data": self.allowed})()})()
+g = {"X-Real-IP": "203.0.113.200"}
+main._rl.clear(); main._rl_day.clear()
+main.sb = _FakeSB(True)
+assert rl.post("/chat", json={"question": ""}, headers=g).status_code == 200      # DB says allow
+main.sb = _FakeSB(False)
+assert rl.post("/chat", json={"question": ""}, headers=g).status_code == 429      # DB says block
+assert main.sb.calls[0] == ("sju_rate_check", {"p_ip": "203.0.113.200",
+                                               "p_max_min": main.RATE_MAX, "p_max_day": main.RATE_DAY_MAX})
+# DB unreachable -> fall back to the in-memory limit, never crash.
+class _BrokenSB:
+    def rpc(self, *a, **k): raise RuntimeError("db down")
+main.sb = _BrokenSB()
+main._rl.clear(); main._rl_day.clear()
+assert rl.post("/chat", json={"question": ""}, headers=g).status_code == 200      # memory allows
+main.sb = None
+
 print("hardening OK")

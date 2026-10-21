@@ -80,3 +80,59 @@ begin
 end $$;
 revoke execute on function swap_sju_knowledge(real) from public, anon, authenticated;
 grant execute on function swap_sju_knowledge(real) to service_role;
+
+-- ── Global per-IP rate limit for the chat API ──────────────────────────────────
+-- The app also limits per instance in memory, but Vercel runs several instances, so
+-- that caps at 15/min x instances. This table is the shared, authoritative counter.
+-- Written only by the SECURITY DEFINER function below; direct access is denied.
+create table if not exists public.sju_rate_limit (
+  ip           text primary key,
+  minute_start timestamptz not null default now(),
+  minute_count int not null default 0,
+  day          date not null default (now() at time zone 'utc')::date,
+  day_count    int not null default 0
+);
+alter table public.sju_rate_limit enable row level security;
+revoke all on public.sju_rate_limit from anon, authenticated;
+
+-- Atomically roll the minute/day windows, count this hit, and say whether it's allowed.
+-- One row locked per IP (distinct IPs never contend). SECURITY DEFINER so the bot's
+-- publishable key can run it without direct table access.
+create or replace function public.sju_rate_check(p_ip text, p_max_min int, p_max_day int)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  r      public.sju_rate_limit%rowtype;
+  now_ts timestamptz := now();
+  today  date := (now() at time zone 'utc')::date;
+  ok     boolean;
+begin
+  insert into public.sju_rate_limit(ip) values (p_ip) on conflict (ip) do nothing;
+  select * into r from public.sju_rate_limit where ip = p_ip for update;
+  if now_ts - r.minute_start >= interval '60 seconds' then
+    r.minute_start := now_ts; r.minute_count := 0;
+  end if;
+  if r.day <> today then
+    r.day := today; r.day_count := 0;
+  end if;
+  ok := r.minute_count < p_max_min and r.day_count < p_max_day;
+  if ok then
+    r.minute_count := r.minute_count + 1;
+    r.day_count := r.day_count + 1;
+  end if;
+  update public.sju_rate_limit
+     set minute_start = r.minute_start, minute_count = r.minute_count,
+         day = r.day, day_count = r.day_count
+   where ip = p_ip;
+  -- occasionally sweep rows idle for over a day, so the table can't grow forever
+  if random() < 0.005 then
+    delete from public.sju_rate_limit
+     where day < today and minute_start < now_ts - interval '1 day';
+  end if;
+  return ok;
+end $$;
+revoke execute on function public.sju_rate_check(text, int, int) from public;
+grant  execute on function public.sju_rate_check(text, int, int) to anon, authenticated, service_role;
