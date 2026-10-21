@@ -6,6 +6,7 @@ and, for questions about dates, deadlines or notices, reads those pages of the o
 Answers stream from Gemini, rotating across free-tier models as limits fill up.
 """
 import asyncio
+import hashlib
 import html
 import json
 import math
@@ -16,6 +17,8 @@ from datetime import datetime, timedelta, timezone
 import httpx
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from starlette.datastructures import Headers
+from starlette.staticfiles import NotModifiedResponse
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional
@@ -35,7 +38,25 @@ app = FastAPI()
 FRAME_ANCESTORS = "frame-ancestors 'self' https://sju.edu.in https://*.sju.edu.in"
 
 
+def _content_etag(path: str) -> str:
+    # Not cached by mtime/size: on Vercel those are exactly what doesn't change.
+    # The files are small, so hashing per request costs about a millisecond.
+    with open(path, "rb") as f:
+        return '"' + hashlib.md5(f.read(), usedforsecurity=False).hexdigest() + '"'
+
+
 class SJUStaticFiles(StaticFiles):
+    def file_response(self, full_path, stat_result, scope, status_code=200):
+        # Vercel deploys every file with the same fixed timestamp, so Starlette's
+        # mtime+size ETag and its Last-Modified never changed when a file did: returning
+        # browsers were told "304 Not Modified" and kept the old chat. Tag by content.
+        response = FileResponse(full_path, status_code=status_code, stat_result=stat_result)
+        del response.headers["last-modified"]
+        response.headers["etag"] = _content_etag(full_path)
+        if self.is_not_modified(response.headers, Headers(scope=scope)):
+            return NotModifiedResponse(response.headers)
+        return response
+
     async def get_response(self, path, scope):
         response = await super().get_response(path, scope)
         response.headers["Content-Security-Policy"] = FRAME_ANCESTORS

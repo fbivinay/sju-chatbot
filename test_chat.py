@@ -279,3 +279,30 @@ preflight = client.options("/chat/stream", headers={"Origin": "https://evil.exam
 assert "access-control-allow-origin" not in preflight.headers
 
 print("embedding OK")
+
+
+# ── Caching: Vercel gives every deployed file the same timestamp ─────────────────
+# A same-size edit ("Admissions Open 2026" -> "Admissions" + padding) must still reach
+# a browser that cached the old file.
+import tempfile  # noqa: E402
+from fastapi import FastAPI  # noqa: E402
+
+with tempfile.TemporaryDirectory() as d:
+    path = os.path.join(d, "embed.html")
+    cached = TestClient(FastAPI())
+    cached.app.mount("/s", main.SJUStaticFiles(directory=d))
+    with open(path, "w") as f:
+        f.write("Admissions Open 2026")
+    os.utime(path, (1540000000, 1540000000))
+    old = cached.get("/s/embed.html")
+    assert "last-modified" not in old.headers
+    with open(path, "w") as f:
+        f.write("Admissions          ")   # same size
+    os.utime(path, (1540000000, 1540000000))   # same frozen timestamp
+    new = cached.get("/s/embed.html", headers={"If-None-Match": old.headers["etag"],
+                                               "If-Modified-Since": "Sat, 20 Oct 2018 01:46:40 GMT"})
+    assert new.status_code == 200 and new.text.startswith("Admissions "), new.status_code
+    # ...while an unchanged file still gets a cheap 304
+    assert cached.get("/s/embed.html", headers={"If-None-Match": new.headers["etag"]}).status_code == 304
+
+print("caching OK")
