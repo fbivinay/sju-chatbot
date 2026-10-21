@@ -333,12 +333,34 @@ print("answer guards OK")
 # ── Rate limit + locked health ──────────────────────────────────────────────────
 main._hits.clear(); main._hits_day.clear()
 rl = TestClient(main.app)
-hdr = {"X-Forwarded-For": "203.0.113.9"}
+hdr = {"X-Real-IP": "203.0.113.9"}
 ok = sum(rl.post("/chat", json={"question": ""}, headers=hdr).status_code == 200 for _ in range(main.RATE_MAX))
 assert ok == main.RATE_MAX, ok                                   # first RATE_MAX allowed
 assert rl.post("/chat", json={"question": ""}, headers=hdr).status_code == 429   # then blocked
 assert rl.post("/chat/stream", json={"question": ""}, headers=hdr).status_code == 429   # shared across endpoints
-assert rl.post("/chat", json={"question": ""}, headers={"X-Forwarded-For": "198.51.100.2"}).status_code == 200  # other IP fine
+assert rl.post("/chat", json={"question": ""}, headers={"X-Real-IP": "198.51.100.2"}).status_code == 200  # other IP fine
+
+# A spoofed client x-forwarded-for does NOT change the key or reset the block.
+assert rl.post("/chat", json={"question": ""},
+               headers={"X-Real-IP": "203.0.113.9", "X-Forwarded-For": "1.2.3.4"}).status_code == 429
+
+# Eviction frees stale IPs but never clears an at-limit active one.
+main._hits.clear(); main._hits_day.clear()
+now = time.time(); today = int(now // 86400)
+main._hits["203.0.113.9"] = [now] * main.RATE_MAX              # active, at the minute cap
+main._hits_day["203.0.113.9"] = (today, main.RATE_MAX)
+for i in range(10001):                                         # stale filler from a past minute
+    main._hits[f"ip{i}"] = [now - 120]
+    main._hits_day[f"ip{i}"] = (today - 1, 1)
+main._evict_stale(now, today)
+assert "203.0.113.9" in main._hits and len(main._hits) < 100   # active kept, stale gone
+assert rl.post("/chat", json={"question": ""}, headers=hdr).status_code == 429   # still blocked
+main._hits.clear(); main._hits_day.clear()
+
+# IPv6 addresses in the same /64 share one bucket.
+b1 = main.client_ip(type("R", (), {"headers": {"x-real-ip": "2001:db8:1:2:aaaa::1"}, "client": None})())
+b2 = main.client_ip(type("R", (), {"headers": {"x-real-ip": "2001:db8:1:2:bbbb::9"}, "client": None})())
+assert b1 == b2 == "2001:db8:1:2::/64", (b1, b2)
 
 # /health hides per-model quota unless the token matches
 main.HEALTH_TOKEN = ""

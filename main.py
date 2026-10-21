@@ -743,9 +743,28 @@ _hits_day = {}    # ip -> (day, count)
 
 
 def client_ip(request: Request) -> str:
-    # Vercel sets x-forwarded-for; its first entry is the real client.
-    fwd = request.headers.get("x-forwarded-for", "")
-    return fwd.split(",")[0].strip() or (request.client.host if request.client else "unknown")
+    # The CLIENT can send its own x-forwarded-for, and its leftmost entry is that
+    # spoofable value - so don't key the limit on it. Vercel sets x-real-ip and
+    # x-vercel-forwarded-for to the true client IP; prefer those. IPv6 is bucketed
+    # to its /64 so one owner can't rotate addresses within their block to dodge it.
+    ip = (request.headers.get("x-real-ip")
+          or request.headers.get("x-vercel-forwarded-for", "").split(",")[0]
+          or (request.client.host if request.client else "")).strip() or "unknown"
+    if ip.count(":") >= 4:   # IPv6 -> first four hextets (/64)
+        ip = ":".join(ip.split(":")[:4]) + "::/64"
+    return ip
+
+
+def _evict_stale(now: float, day: int):
+    # Drop only IPs with nothing recent, never an active one - clearing everyone
+    # would let an attacker rotate spoofed IPs past the cap to reset their own count.
+    for ip in [ip for ip, ts in _hits.items() if all(now - t >= RATE_WINDOW for t in ts)]:
+        d, _ = _hits_day.get(ip, (day, 0))
+        if d != day:            # no request this minute and not today -> fully stale
+            _hits.pop(ip, None)
+            _hits_day.pop(ip, None)
+        else:
+            _hits[ip] = []      # keep today's daily count, drop the empty minute list
 
 
 def rate_limited(request: Request) -> bool:
@@ -760,9 +779,9 @@ def rate_limited(request: Request) -> bool:
         _hits[ip], _hits_day[ip] = recent, (day, count)
         return True
     recent.append(now)
-    if len(_hits) > 10000:   # crude cap so the dicts can't grow without bound
-        _hits.clear(); _hits_day.clear()
     _hits[ip], _hits_day[ip] = recent, (day, count + 1)
+    if len(_hits) > 10000:   # bound memory by evicting stale IPs, never active ones
+        _evict_stale(now, day)
     return False
 
 
