@@ -60,7 +60,8 @@ img{max-width:100%}
 .csend:disabled{opacity:.4;cursor:not-allowed}
 .csend svg{width:24px;height:24px;fill:#fff}
 .cw-foot{text-align:center;font-size:13px;letter-spacing:.02em;color:#6b7a90;padding:0 0 10px;background:rgba(255,255,255,.5);flex-shrink:0}
-.cw-foot b{color:#0a2340;font-weight:700}
+.cw-foot{display:flex;align-items:center;justify-content:center;gap:8px}
+.cw-foot img{height:30px;width:auto;display:block}
 .cw-inp{padding-bottom:10px}
 
 /* ── Admission Assistant components ── */
@@ -111,7 +112,7 @@ img{max-width:100%}
       <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
     </button>
   </div>
-  <div class="cw-foot">Powered by <b>Outpace Technologies</b></div>
+  <div class="cw-foot">Powered by <img src="/static/outpace.svg" alt="Outpace Technologies"></div>
 </div>
 
 <script>
