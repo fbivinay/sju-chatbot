@@ -1,13 +1,22 @@
-# SJU Chatbot
+# SJU Chatbot — "Joey"
 
-AI chatbot for **St Joseph's University, Bengaluru** — answers questions about
-programmes, admissions, fees, campus, and more. A FastAPI backend serves a
-single-page website clone of sju.edu.in with an embedded chat widget, powered by
-Google Gemini and grounded in real content scraped from the university site.
+**Joey** is an AI assistant for **St Joseph's University, Bengaluru** — it answers
+questions about programmes, admissions, fees, campus, placements and more. A FastAPI
+backend serves a demo clone of sju.edu.in with an embedded chat widget, powered by
+Google Gemini and grounded in real content read from the university site.
 
-Live demo: https://sju-chatbot.vercel.app (the demo site is laptop or desktop only; the chat widget itself works on any device; deployed to Vercel as a Python serverless function).
+Live demo: **https://sju-chatbot.vercel.app** (deployed to Vercel as a Python
+serverless function; the chat widget works on any device, the demo site itself is
+laptop/desktop only).
 
-![The demo page with the assistant answering a question about MSc programmes](docs/screenshot.png)
+Built by **Outpace Technologies**.
+
+| Joey on the site | The chat open | On a phone |
+|---|---|---|
+| ![Joey's floating button and greeting bubble on the demo site](docs/demo-joey.png) | ![The chat open, showing the programme options and Joey's branding](docs/chat-open.png) | ![The chat filling a phone screen](docs/chat-phone.png) |
+
+A floating mascot button sits bottom-right on every page; a "Hey, I'm Joey" bubble
+greets visitors, and clicking it opens a frosted-glass chat window.
 
 ---
 
@@ -46,8 +55,23 @@ Three knowledge sources are combined, newest first:
    questions, even with no database.
 
 Gemini is used **only to write the final answer**, from what it is given — it
-doesn't browse. It is told never to guess specifics (fees, dates, names): if none
-of the sources state them, it says so and points to the official page or phone.
+doesn't browse. Guard rails in `main.py` keep answers accurate and safe:
+
+- **Never guess specifics.** Fees, dates and names not in the sources are not
+  invented; the bot says so and points to the official page or phone.
+- **Past dates are marked.** Every date in the content is compared to today and
+  tagged `(passed)` before the model sees it, so a deadline that is over is never
+  called "upcoming" (`mark_passed`).
+- **Only real links.** A Markdown link survives only if its URL actually appears in
+  the sources; made-up URLs are stripped to plain text (`drop_unknown_links`), so
+  the bot can't send students to a 404.
+- **Exact programme counts.** The programme list behind the chat's UG/PG/PG
+  Diploma/PhD buttons is parsed from `static/embed.html` and handed to the model, so
+  "how many UG courses" is answered with the real number, not a guess.
+- **Prompt-injection resistant.** The scraped page text is given to the model as
+  untrusted *data*; it is told to ignore any instructions hidden inside it.
+- **Short by default.** Answers lead with the direct answer and stay ~100 words
+  unless the student asks for more.
 
 ---
 
@@ -57,7 +81,8 @@ of the sources state them, it says so and points to the official page or phone.
 - **AI:** Google Gemini free tier, rotating across 8 models (`MODELS` in `main.py`)
 - **Knowledge base:** Supabase (Postgres) full-text search
 - **Frontend:** plain HTML/JS, no framework — `static/embed.html` (chat UI),
-  `static/widget.js` (one-tag embed loader), `static/index.html` (demo site)
+  `static/widget.js` (one-tag embed loader + Joey button/greeting),
+  `static/index.html` (demo site), `static/joey.svg` (the mascot)
 - **Hosting:** Vercel
 
 ---
@@ -67,10 +92,12 @@ of the sources state them, it says so and points to the official page or phone.
 | Variable          | Needed for            | Notes                                         |
 |-------------------|-----------------------|-----------------------------------------------|
 | `GEMINI_API_KEY`  | Chat answers          | Required. Get one free at ai.google.dev       |
-| `SUPABASE_URL`    | Knowledge-base search | Optional — bot still runs on built-in facts   |
-| `SUPABASE_KEY`    | Knowledge-base search | Publishable key (`sb_publishable_…`) — the public keys can only read |
+| `SUPABASE_URL`    | Knowledge base + global rate limit | Optional — bot still runs on built-in facts |
+| `SUPABASE_KEY`    | Knowledge base + global rate limit | Publishable key (`sb_publishable_…`); it can only read, and reach the rate-limit function |
+| `HEALTH_TOKEN`    | `/health` detail      | Optional. Without it, `/health` hides the per-model quota; with it, `GET /health?token=…` shows the full detail |
 
-If Supabase vars are missing, the bot falls back to built-in knowledge only.
+If Supabase vars are missing, the bot falls back to built-in knowledge only, and the
+rate limit runs in memory per instance (see **Rate limiting** below).
 
 ---
 
@@ -141,11 +168,39 @@ footer include (e.g. `footer.php`) rather than to each page.
 empty frame, and the API sends no CORS headers, so other sites' pages can't call
 it from a browser either. If the university hosts the widget on another domain,
 add it to `FRAME_ANCESTORS`. (Scripts outside a browser can still reach the API —
-the Gemini rate limits and model rotation are the backstop there.)
+the per-IP rate limit, below, is the backstop there.)
 
 `static/embed.html` is the chat UI itself, and `static/index.html` (the demo
 site clone) loads it through the very same `widget.js` — one copy of the chat
 code, so the demo can never drift from what the university runs.
+
+---
+
+## Rate limiting & hardening
+
+The chat API is open to the internet, so it is protected against abuse that would
+drain the Gemini quota and leave real students with "busy" messages:
+
+- **Per-visitor limit: 15 requests/minute and 300/day.** Keyed on the true client
+  IP (`x-real-ip` / `x-vercel-forwarded-for`, which the client can't spoof), with
+  IPv6 bucketed to its /64. Over the limit returns HTTP 429.
+- **Global counter (recommended).** Vercel runs several instances, so an in-memory
+  limit only caps per instance. Running `supabase_setup.sql` adds a shared counter
+  (`sju_rate_limit` table + the `sju_rate_check` function) that makes the limit
+  apply across the whole deployment. The limits are constants inside that function
+  so a caller can't raise its own cap, and the IP is validated by an `inet` cast.
+- **Graceful fallback.** If Supabase is unreachable, the limit drops back to the
+  in-memory LRU (bounded at 50,000 IPs) instead of failing open or crashing.
+- **`/health` is locked.** It returns only `status` by default; the per-model quota
+  detail needs `?token=` matching `HEALTH_TOKEN`, so it can't be used to map which
+  model still has room.
+- **Embedding lock.** `Content-Security-Policy: frame-ancestors` plus no CORS (see
+  the embedding section) keeps other sites from framing or calling the chat from a
+  browser.
+
+`python test_chat.py` covers all of this offline — the limit tripping, the LRU
+eviction keeping active IPs, IP parsing, the locked health endpoint, and the answer
+guard rails — without spending any Gemini quota.
 
 ---
 
@@ -164,7 +219,8 @@ The `sju_knowledge` table holds the scraped content:
 **One-time setup:** run `supabase_setup.sql` in the Supabase SQL Editor. It
 creates the full-text index, the `match_sju_knowledge(query, match_count)`
 function that `main.py` calls, the read-only rules for public keys, the
-no-duplicates index and the staging table + swap function the refresh uses.
+no-duplicates index, the staging table + swap function the refresh uses, and the
+`sju_rate_limit` table + `sju_rate_check` function for the global rate limit.
 
 **Daily refresh:** `.github/workflows/refresh-knowledge.yml` runs
 `scrape_playwright.py` every day at 03:00 IST on GitHub Actions (free for public
@@ -196,9 +252,9 @@ tab if that happens.
 | GET    | `/`                  | Demo site clone, loads the widget       |
 | GET    | `/static/widget.js`  | Embed loader for the university site    |
 | GET    | `/static/embed.html` | The chat UI itself (runs in the iframe) |
-| POST   | `/chat/stream`       | `{ question, history }` → answer as server-sent events (used by the widget) |
-| POST   | `/chat`              | `{ question, history }` → `{ answer }` in one reply |
-| GET    | `/health`            | Status / config check                   |
+| POST   | `/chat/stream`       | `{ question, history }` → answer as server-sent events (used by the widget). Rate-limited; 429 over the cap |
+| POST   | `/chat`              | `{ question, history }` → `{ answer }` in one reply. Rate-limited |
+| GET    | `/health`            | `status` only; `?token=HEALTH_TOKEN` adds per-model quota detail |
 
 ---
 
