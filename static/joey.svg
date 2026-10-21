@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- Joey, the SJU Assistant: an owl in SJU navy and gold -->
+  <defs>
+    <radialGradient id="bg" cx=".35" cy=".3" r=".9">
+      <stop offset="0" stop-color="#1b4f96"/>
+      <stop offset="1" stop-color="#0a2340"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f9e08a"/>
+      <stop offset="1" stop-color="#c9a227"/>
+    </linearGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fffaf0"/>
+      <stop offset="1" stop-color="#ece2c8"/>
+    </linearGradient>
+    <clipPath id="disc"><circle cx="60" cy="60" r="57"/></clipPath>
+  </defs>
+  <circle cx="60" cy="60" r="57" fill="url(#bg)"/>
+  <g clip-path="url(#disc)">
+    <!-- wings -->
+    <path d="M32 66 C20 78 22 96 34 106 C34 92 36 78 40 70 Z" fill="#d8c9a3"/>
+    <path d="M88 66 C100 78 98 96 86 106 C86 92 84 78 80 70 Z" fill="#d8c9a3"/>
+    <!-- body and head -->
+    <path d="M60 42 C84 42 92 62 90 84 C88 104 76 122 60 122 C44 122 32 104 30 84 C28 62 36 42 60 42 Z" fill="url(#body)"/>
+    <!-- belly feathers -->
+    <path d="M47 94 q4.5 4 9 0 q4.5 4 9 0 q4.5 4 9 0" stroke="#d6c7a0" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path d="M51.5 103 q4.25 4 8.5 0 q4.25 4 8.5 0" stroke="#d6c7a0" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <!-- eyes -->
+    <circle cx="47" cy="66" r="12.5" fill="url(#gold)"/>
+    <circle cx="73" cy="66" r="12.5" fill="url(#gold)"/>
+    <circle cx="47" cy="66" r="12.5" fill="none" stroke="#b08a1c" stroke-width="1"/>
+    <circle cx="73" cy="66" r="12.5" fill="none" stroke="#b08a1c" stroke-width="1"/>
+    <circle cx="48" cy="67" r="6.5" fill="#0a2340"/>
+    <circle cx="72" cy="67" r="6.5" fill="#0a2340"/>
+    <circle cx="50.5" cy="64.5" r="2.2" fill="#fff"/>
+    <circle cx="74.5" cy="64.5" r="2.2" fill="#fff"/>
+    <!-- cheeks -->
+    <ellipse cx="38" cy="81" rx="4.5" ry="2.6" fill="#f2a7a0" opacity=".55"/>
+    <ellipse cx="82" cy="81" rx="4.5" ry="2.6" fill="#f2a7a0" opacity=".55"/>
+    <!-- beak -->
+    <path d="M55.5 76 L64.5 76 L60 84 Z" fill="#e2a626"/>
+  </g>
+  <!-- graduation cap -->
+  <path d="M45 41 L45 48 Q60 55 75 48 L75 41 Z" fill="#0a2340"/>
+  <path d="M60 25 L88 36 L60 47 L32 36 Z" fill="#0f2f57" stroke="url(#gold)" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M60 36 L84 38 L84 50" stroke="url(#gold)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <circle cx="84" cy="52" r="2.6" fill="url(#gold)"/>
+  <circle cx="60" cy="36" r="2" fill="url(#gold)"/>
+  <!-- gold rim -->
+  <circle cx="60" cy="60" r="57" fill="none" stroke="url(#gold)" stroke-width="3"/>
+</svg>

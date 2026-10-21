@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SJU Assistant</title>
+<title>Joey · SJU Assistant</title>
 <!-- The chat widget works on every device. Only the demo site (index.html) is desktop-only. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,7 +26,8 @@ img{max-width:100%}
 .cw-av{width:58px;height:58px;background:#f0c93d;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;color:#0a2340;flex-shrink:0;overflow:hidden;box-shadow:0 0 0 3px rgba(255,255,255,.25)}
 .cw-av img,.cav img{width:100%;height:100%;object-fit:cover;object-position:center;border-radius:50%;display:block}
 .cw-info{flex:1}
-.cw-name{font-weight:700;font-size:20px;letter-spacing:-.02em}
+.cw-name{font-weight:800;font-size:21px;letter-spacing:-.02em;display:flex;align-items:baseline;gap:8px}
+.cw-tag{font-size:13px;font-weight:600;letter-spacing:.02em;color:#f0c93d}
 .cw-status{font-size:15px;opacity:.75;margin-top:2px;display:flex;align-items:center;gap:6px}
 .cw-dot{width:10px;height:10px;background:#4ade80;border-radius:50%;display:inline-block}
 .cw-close{background:rgba(255,255,255,.12);border:none;border-radius:50%;width:42px;height:42px;color:#fff;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0}
@@ -73,7 +74,7 @@ img{max-width:100%}
 .opt-card{background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.95);border-radius:16px;padding:16px 15px;font-size:17px;font-weight:600;color:#0a2340;cursor:pointer;font-family:inherit;transition:all .25s cubic-bezier(.2,.9,.25,1);text-align:left;display:flex;align-items:center;gap:10px;box-shadow:0 4px 14px rgba(10,35,64,.07)}
 .opt-card:hover{border-color:#f0c93d;background:rgba(255,251,240,.95);transform:translateY(-2px);box-shadow:0 10px 22px rgba(10,35,64,.12)}
 .opt-card .oc-ic{font-size:24px}
-@media(max-width:480px){.opt-cards,.lvl-btns{margin-left:0}.opt-card{font-size:15px;padding:14px 12px}.lvl-btns{gap:10px}.lvl-btn{min-width:0;font-size:15px;padding:14px 8px}.lvl-btn small{font-size:12px}}
+@media(max-width:480px){.cw-tag{display:none}.cw-head{padding:16px;gap:10px}.cw-av{width:50px;height:50px}.opt-cards,.lvl-btns{margin-left:0}.opt-card{font-size:15px;padding:14px 12px}.lvl-btns{gap:10px}.lvl-btn{min-width:0;font-size:15px;padding:14px 8px}.lvl-btn small{font-size:12px}}
 .search-wrap{position:relative;flex:1}
 .search-drop{position:absolute;bottom:calc(100% + 9px);left:0;right:0;background:rgba(255,255,255,.92);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.95);border-radius:18px;box-shadow:0 -6px 24px rgba(0,0,0,.14);max-height:330px;overflow-y:auto;display:none;z-index:50}
 .search-drop.show{display:block}
@@ -89,9 +90,9 @@ img{max-width:100%}
 <body>
 <div id="chat-win">
   <div class="cw-head">
-    <div class="cw-av"><img src="/static/logo.jpg" alt="SJU" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div>
+    <div class="cw-av"><img src="/static/joey.svg" alt="Joey"style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div>
     <div class="cw-info">
-      <div class="cw-name">SJU Assistant</div>
+      <div class="cw-name">Joey <span class="cw-tag">SJU Assistant</span></div>
       <div class="cw-status"><span class="cw-dot"></span> Online</div>
     </div>
     <button class="cw-startover" onclick="startOver()">⟳ Start Over</button>
@@ -301,7 +302,7 @@ function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g
 
 function botMsg(html){
   const d=document.createElement('div'); d.className='cmsg bot';
-  d.innerHTML=`<div class="cav"><img src="/static/logo.jpg" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div><div class="cbub">${html}</div>`;
+  d.innerHTML=`<div class="cav"><img src="/static/joey.svg" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div><div class="cbub">${html}</div>`;
   $msgs().appendChild(d); scrollDown();
   return d.querySelector('.cbub');
 }
@@ -329,7 +330,7 @@ function rawBlock(html){
 function scrollDown(){ const b=$msgs(); b.scrollTop=b.scrollHeight; }
 function showTyping(){
   const d=document.createElement('div'); d.className='cmsg bot'; d.id='cwTyping';
-  d.innerHTML=`<div class="cav"><img src="/static/logo.jpg" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div><div class="cbub"><span class="tdot" style="animation-delay:0s"></span><span class="tdot" style="animation-delay:.2s"></span><span class="tdot" style="animation-delay:.4s"></span></div>`;
+  d.innerHTML=`<div class="cav"><img src="/static/joey.svg" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div><div class="cbub"><span class="tdot" style="animation-delay:0s"></span><span class="tdot" style="animation-delay:.2s"></span><span class="tdot" style="animation-delay:.4s"></span></div>`;
   $msgs().appendChild(d); scrollDown();
 }
 function hideTyping(){ document.getElementById('cwTyping')?.remove(); }
@@ -343,7 +344,7 @@ function startOver(){
   renderWelcome();
 }
 function renderWelcome(){
-  botMsg(`Hi 👋 Welcome to the <strong>SJU Assistant</strong>!<br><br>Choose a programme level, or open any official page below:`);
+  botMsg(`Hi 👋 I’m <strong>Joey</strong>, your guide to St Joseph’s University!<br><br>Choose a programme level, or open any official page below:`);
   rawBlock(`<div class="lvl-btns" style="flex-wrap:wrap">
     <button class="lvl-btn" style="flex-basis:47%" onclick="pickLevel('UG')">🎓 Undergraduate<small>BCA · BSc · BBA · BCom · BA</small></button>
     <button class="lvl-btn" style="flex-basis:47%" onclick="pickLevel('PG')">📚 Postgraduate<small>MSc · MCA · MBA · MA · MSW</small></button>

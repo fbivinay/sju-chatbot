@@ -18,35 +18,45 @@
 
   var css = document.createElement('style');
   css.textContent = [
-    '#sjuFab{position:fixed;bottom:24px;right:24px;width:70px;height:70px;background:#0a2340;border:none;border-radius:50%;cursor:pointer;box-shadow:0 4px 20px rgba(0,32,96,.45);display:flex;align-items:center;justify-content:center;z-index:2147483000;transition:transform .2s,box-shadow .2s;padding:0}',
-    '#sjuFab:hover{transform:scale(1.1);box-shadow:0 8px 28px rgba(0,32,96,.55)}',
-    '#sjuFab svg{width:32px;height:32px;fill:#fff}',
-    '#sjuFabDot{position:absolute;top:-3px;right:-3px;width:24px;height:24px;background:#e63946;border-radius:50%;border:3px solid #fff;font:800 12px/1 system-ui,sans-serif;color:#fff;display:flex;align-items:center;justify-content:center;animation:sjuPulse 2s ease-in-out infinite}',
-    '@keyframes sjuPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}',
-    '#sjuFabLabel{position:fixed;right:104px;bottom:44px;background:#fff;color:#e63946;font:800 15px/1 system-ui,sans-serif;padding:9px 18px;border-radius:22px;box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:2147482999;white-space:nowrap}',
+    // Joey, the floating mascot button: gently bobs, with a soft gold halo
+    '#sjuFab{position:fixed;bottom:24px;right:24px;width:78px;height:78px;background:none;border:none;border-radius:50%;cursor:pointer;padding:0;z-index:2147483000;filter:drop-shadow(0 10px 22px rgba(10,35,64,.38));animation:sjuBob 3.2s ease-in-out infinite;transition:transform .3s cubic-bezier(.2,.9,.25,1)}',
+    '#sjuFab:hover{transform:scale(1.08)}',
+    '#sjuFab img{width:100%;height:100%;display:block;border-radius:50%}',
+    '#sjuFab::before{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(240,201,61,.7);animation:sjuHalo 2.6s ease-out infinite}',
+    '#sjuFabDot{position:absolute;bottom:4px;right:4px;width:16px;height:16px;background:#22c55e;border:3px solid #fff;border-radius:50%}',
+    '@keyframes sjuBob{0%,100%{translate:0 0}50%{translate:0 -6px}}',
+    '@keyframes sjuHalo{0%{transform:scale(.92);opacity:.9}100%{transform:scale(1.25);opacity:0}}',
+    // "Hey, I'm Joey" greeting bubble beside the button
+    '#sjuHello{position:fixed;right:116px;bottom:44px;max-width:260px;padding:14px 38px 14px 18px;background:rgba(255,255,255,.88);-webkit-backdrop-filter:blur(14px) saturate(160%);backdrop-filter:blur(14px) saturate(160%);border:1px solid rgba(255,255,255,.9);border-radius:20px 20px 6px 20px;box-shadow:0 14px 40px rgba(10,35,64,.22);font:500 15px/1.4 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;color:#33415c;cursor:pointer;z-index:2147482999;opacity:0;transform:translateY(10px) scale(.92);transform-origin:bottom right;pointer-events:none;transition:opacity .4s ease,transform .5s cubic-bezier(.2,1.4,.4,1)}',
+    '#sjuHello.show{opacity:1;transform:none;pointer-events:all}',
+    '#sjuHello b{display:block;font-size:17px;font-weight:800;color:#0a2340;letter-spacing:-.01em;margin-bottom:2px}',
+    '#sjuHello b span{background:linear-gradient(135deg,#d4a72c,#b8860b);-webkit-background-clip:text;background-clip:text;color:transparent}',
+    '#sjuHelloX{position:absolute;top:8px;right:8px;width:24px;height:24px;border:none;border-radius:50%;background:rgba(10,35,64,.06);color:#5b6b85;font:600 15px/1 system-ui,sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center}',
+    '#sjuHelloX:hover{background:rgba(10,35,64,.12)}',
+    '@media(prefers-reduced-motion:reduce){#sjuFab,#sjuFab::before{animation:none}}',
     // frosted glass: the iframe is transparent and blurs whatever page sits behind it.
     // color-scheme must match embed.html or Chrome paints the frame opaque.
     '#sjuFrame{position:fixed;bottom:106px;right:24px;width:min(620px,calc(100vw - 48px));height:840px;max-height:calc(100vh - 130px);border:1px solid rgba(255,255,255,.55);border-radius:26px;color-scheme:normal;background:rgba(255,255,255,.08);-webkit-backdrop-filter:blur(28px) saturate(170%);backdrop-filter:blur(28px) saturate(170%);box-shadow:0 24px 70px rgba(10,35,64,.28),0 2px 8px rgba(10,35,64,.08);z-index:2147482999;opacity:0;transform:scale(.96) translateY(14px);transform-origin:bottom right;pointer-events:none;transition:transform .38s cubic-bezier(.2,.9,.25,1),opacity .28s ease}',
     '#sjuFrame.open{opacity:1;transform:none;pointer-events:all}',
     // phones have no room for a floating panel - take the whole screen instead
-    '@media(max-width:560px){#sjuFrame{inset:0;width:100%;height:100%;max-height:none;border:0;border-radius:0}#sjuFabLabel{display:none}}'
+    '@media(max-width:560px){#sjuFrame{inset:0;width:100%;height:100%;max-height:none;border:0;border-radius:0}#sjuFab.open{display:none}#sjuHello{right:110px;max-width:190px;font-size:14px}}'
   ].join('\n');
   document.head.appendChild(css);
 
-  var label = document.createElement('div');
-  label.id = 'sjuFabLabel';
-  label.textContent = 'Chat';
+  var hello = document.createElement('div');
+  hello.id = 'sjuHello';
+  hello.setAttribute('role', 'button');
+  hello.innerHTML = '<b>Hey, I’m <span>Joey</span> 👋</b>Ask me anything about SJU!' +
+    '<button id="sjuHelloX" aria-label="Dismiss">×</button>';
 
   var fab = document.createElement('button');
   fab.id = 'sjuFab';
-  fab.setAttribute('aria-label', 'Open SJU AI Assistant');
-  fab.innerHTML =
-    '<svg viewBox="0 0 24 24"><path d="M12 2a2 2 0 0 1 2 2c0 .55-.22 1.05-.59 1.41A2 2 0 0 1 14 7v1h2a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3v-6a3 3 0 0 1 3-3h2V7a2 2 0 0 1 1-1.73A2 2 0 0 1 10 4a2 2 0 0 1 2-2zM8 10a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1H8zm1.5 2.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm5 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM4 12h1v4H4a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1zm16 0a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-1v-4h1z"/></svg>' +
-    '<span id="sjuFabDot">AI</span>';
+  fab.setAttribute('aria-label', 'Chat with Joey, the SJU Assistant');
+  fab.innerHTML = '<img src="' + base + '/joey.svg" alt=""><span id="sjuFabDot"></span>';
 
   var frame = document.createElement('iframe');
   frame.id = 'sjuFrame';
-  frame.title = 'SJU Assistant';
+  frame.title = 'Joey - SJU Assistant';
   frame.setAttribute('allow', 'clipboard-write');
   frame.setAttribute('allowtransparency', 'true');
 
@@ -56,11 +66,25 @@
     // only fetch the chat app the first time someone actually opens it
     if (open && !loaded) { frame.src = base + '/embed.html'; loaded = true; }
     frame.classList.toggle('open', open);
-    label.style.display = open ? 'none' : '';
+    fab.classList.toggle('open', open);
     if (open) frame.focus();
+    hideHello();
   }
   fab.addEventListener('click', toggle);
-  label.addEventListener('click', toggle);
+  hello.addEventListener('click', toggle);
+
+  // The greeting shows once per visit, until the chat is opened or it is closed.
+  function hideHello() {
+    hello.classList.remove('show');
+    try { sessionStorage.setItem('sjuHelloSeen', '1'); } catch (e) {}
+  }
+  hello.querySelector('#sjuHelloX').addEventListener('click', function (e) {
+    e.stopPropagation();
+    hideHello();
+  });
+  var seen = false;
+  try { seen = sessionStorage.getItem('sjuHelloSeen') === '1'; } catch (e) {}
+  if (!seen) setTimeout(function () { if (!open) hello.classList.add('show'); }, 1500);
 
   window.addEventListener('message', function (e) {
     if (e.origin === origin && e.data === 'sju-chat-close' && open) toggle();
@@ -69,7 +93,7 @@
     if (e.key === 'Escape' && open) toggle();
   });
 
-  function mount() { document.body.append(label, fab, frame); }
+  function mount() { document.body.append(hello, fab, frame); }
   if (document.body) mount();
   else document.addEventListener('DOMContentLoaded', mount);
 })();
