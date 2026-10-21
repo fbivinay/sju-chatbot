@@ -166,13 +166,22 @@ img{max-width:100%}
 
 /* Chatbot styling moved to embed.html; the launcher styles itself. */
 
-/* ── Floating action buttons (WhatsApp + Share, stacked above the AI chat FAB) ── */
-.float-extra{position:fixed;right:24px;z-index:8500;width:75px;height:75px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.25);transition:transform .2s;text-decoration:none;border:none}
+/* ── Floating action buttons (WhatsApp + Share, stacked above the AI chat FAB) ──
+   Same size and right edge as Joey in widget.js (100px at right/bottom 24px; 80px at
+   18px on phones), with an even 24px gap. Change these together with widget.js. */
+.float-extra{position:fixed;right:24px;z-index:8500;width:100px;height:100px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 22px rgba(10,35,64,.3);transition:transform .2s;text-decoration:none;border:none}
 .float-extra:hover{transform:scale(1.08)}
-.float-whatsapp{background:#25D366;bottom:127px}
-.float-whatsapp svg{width:36px;height:36px;fill:#fff}
-.float-share{background:#fff;border:2px solid #0a2340;bottom:218px}
-.float-share svg{width:27px;height:27px;fill:#0a2340}
+.float-whatsapp{background:#25D366;bottom:148px}
+.float-whatsapp svg{width:50px;height:50px;fill:#fff}
+.float-share{background:#fff;border:3px solid #0a2340;bottom:272px}
+.float-share svg{width:40px;height:40px;fill:#0a2340}
+@media(max-width:560px){
+  .float-extra{width:80px;height:80px;right:18px}
+  .float-whatsapp{bottom:116px}
+  .float-whatsapp svg{width:40px;height:40px}
+  .float-share{bottom:214px}
+  .float-share svg{width:32px;height:32px}
+}
 
 /* ── Vertical "Admissions Open" tab ── */
 .admit-tab{position:fixed;right:0;top:50%;background:#f0c93d;color:#0a2340;font-weight:800;font-size:18px;letter-spacing:1.5px;padding:24px 11px;border-radius:12px 0 0 12px;cursor:pointer;z-index:400;box-shadow:-2px 0 8px rgba(0,0,0,.15);writing-mode:vertical-rl;transform:translateY(-50%) rotate(180deg);transform-origin:center;transition:padding .15s;border:none}
