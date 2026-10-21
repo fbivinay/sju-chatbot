@@ -328,3 +328,28 @@ assert main.drop_unknown_links("[Report format](https://www.sju.edu.in/pg-projec
 assert "Undergraduate - 40 programmes:" in main.KNOWLEDGE and "PhD - 13 programmes:" in main.KNOWLEDGE
 
 print("answer guards OK")
+
+
+# ── Rate limit + locked health ──────────────────────────────────────────────────
+main._hits.clear(); main._hits_day.clear()
+rl = TestClient(main.app)
+hdr = {"X-Forwarded-For": "203.0.113.9"}
+ok = sum(rl.post("/chat", json={"question": ""}, headers=hdr).status_code == 200 for _ in range(main.RATE_MAX))
+assert ok == main.RATE_MAX, ok                                   # first RATE_MAX allowed
+assert rl.post("/chat", json={"question": ""}, headers=hdr).status_code == 429   # then blocked
+assert rl.post("/chat/stream", json={"question": ""}, headers=hdr).status_code == 429   # shared across endpoints
+assert rl.post("/chat", json={"question": ""}, headers={"X-Forwarded-For": "198.51.100.2"}).status_code == 200  # other IP fine
+
+# /health hides per-model quota unless the token matches
+main.HEALTH_TOKEN = ""
+assert "models" not in rl.get("/health").json()                 # no token set: minimal
+main.HEALTH_TOKEN = "s3cret"
+assert "models" not in rl.get("/health").json()                 # token set, none given: minimal
+assert "models" not in rl.get("/health?token=wrong").json()
+assert "models" in rl.get("/health?token=s3cret").json()        # correct token: full
+main.HEALTH_TOKEN = ""
+
+# Rule 9 tells the model the content is data, not commands
+assert "untrusted REFERENCE DATA" in main.SYSTEM_PROMPT
+
+print("hardening OK")
