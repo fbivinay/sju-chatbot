@@ -33,10 +33,12 @@
     '@media(prefers-reduced-motion:reduce){#sjuFab,#sjuFab::before{animation:none}}',
     // frosted glass: the iframe is transparent and blurs whatever page sits behind it.
     // color-scheme must match embed.html or Chrome paints the frame opaque.
-    '#sjuFrame{position:fixed;bottom:140px;right:24px;width:min(682px,calc(100vw - 48px));height:924px;max-height:calc(100vh - 164px);border:1px solid rgba(255,255,255,.55);border-radius:26px;color-scheme:normal;background:rgba(255,255,255,.08);-webkit-backdrop-filter:blur(28px) saturate(170%);backdrop-filter:blur(28px) saturate(170%);box-shadow:0 24px 70px rgba(10,35,64,.28),0 2px 8px rgba(10,35,64,.08);z-index:2147482999;opacity:0;transform:scale(.96) translateY(14px);transform-origin:bottom right;pointer-events:none;transition:transform .38s cubic-bezier(.2,.9,.25,1),opacity .28s ease}',
+    '#sjuFrame{position:fixed;bottom:24px;right:24px;width:min(682px,calc(100vw - 48px));height:1016px;max-height:min(calc(110vh - 180px),calc(100vh - 48px));border:1px solid rgba(255,255,255,.55);border-radius:26px;color-scheme:normal;background:rgba(255,255,255,.08);-webkit-backdrop-filter:blur(28px) saturate(170%);backdrop-filter:blur(28px) saturate(170%);box-shadow:0 24px 70px rgba(10,35,64,.28),0 2px 8px rgba(10,35,64,.08);z-index:2147482999;opacity:0;transform:scale(.96) translateY(14px);transform-origin:bottom right;pointer-events:none;transition:transform .38s cubic-bezier(.2,.9,.25,1),opacity .28s ease}',
     '#sjuFrame.open{opacity:1;transform:none;pointer-events:all}',
+    // the open chat takes Joey's corner too (10% more height); the header's close button and Esc bring him back
+    '#sjuFab.open{display:none}',
     // phones have no room for a floating panel - take the whole screen instead
-    '@media(max-width:560px){#sjuFrame{inset:0;width:100%;height:100%;max-height:none;border:0;border-radius:0}#sjuFab.open{display:none}#sjuFab{width:80px;height:80px;bottom:18px;right:18px}#sjuHello{right:110px;bottom:34px;max-width:210px;padding:14px 18px;font-size:15px}#sjuHello b{font-size:19px}}'
+    '@media(max-width:560px){#sjuFrame{inset:0;width:100%;height:100%;max-height:none;border:0;border-radius:0}#sjuFab{width:80px;height:80px;bottom:18px;right:18px}#sjuHello{right:110px;bottom:34px;max-width:210px;padding:14px 18px;font-size:15px}#sjuHello b{font-size:19px}}'
   ].join('\n');
   document.head.appendChild(css);
 
