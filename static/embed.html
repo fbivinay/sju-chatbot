@@ -342,7 +342,7 @@ function startOver(){
   inflight?.abort();   // drop an answer still streaming into the old conversation
   state.level=null; state.course=null; state.history=[]; state.openedLinks=[];
   $msgs().innerHTML=''; hideDrop();
-  $inp().value=''; $inp().placeholder='Ask anything about SJU...';
+  $inp().value=''; syncInput();
   renderWelcome();
 }
 function renderWelcome(){
@@ -357,12 +357,19 @@ function renderWelcome(){
   $msgs().scrollTop = 0;
 }
 const LEVEL_NAMES = { UG:"Undergraduate", PG:"Postgraduate", PGD:"PG Diploma", PHD:"PhD" };
+// The input's hint follows the state, so call this after every change to
+// state.level / state.course instead of setting the placeholder by hand.
+function syncInput(){
+  $inp().placeholder = state.course ? 'Ask anything about this programme...'
+    : state.level ? `Search ${LEVEL_NAMES[state.level]||state.level} programmes...`
+    : 'Ask anything about SJU...';
+}
 function pickLevel(level){
   state.level=level; state.course=null;
   const lname=LEVEL_NAMES[level]||level;
   usrMsg(lname);
   botMsg(`Great! Please <strong>search or select</strong> the ${lname} programme you're interested in. 🔍<br><span style="font-size:14px;font-weight:700;opacity:.7">Start typing below — e.g. "data", "computer", "psych"...</span>`);
-  $inp().placeholder=`Search ${lname} programmes...`;
+  syncInput();
   $inp().focus();
   showDrop(PROGRAMMES[level]);
 }
@@ -387,7 +394,7 @@ function chooseCourseByName(name){
 }
 function selectCourse(c){
   state.course=c; if(c.level) state.level=c.level; hideDrop();
-  $inp().value=''; $inp().placeholder='Ask anything about this programme...';
+  $inp().value=''; syncInput();
   usrMsg(c.name);
   // give the AI context for later conversational questions
   state.history.push({role:'user',content:`I'm interested in the ${c.name} programme at SJU.`});
@@ -439,6 +446,7 @@ function renderGlobalActions(){
 }
 function openGlobal(i){
   const g=GLOBAL_ACTIONS[i]; if(!g) return;
+  if(!state.course){ state.level=null; hideDrop(); syncInput(); }   // leave a half-done programme search
   usrMsg(g.label);
   state.openedLinks.push(g.url);
   botMsg(`<a class="link-card" href="${g.url}" target="_blank" rel="noopener">${g.icon} ${esc(g.label)} — official page ↗</a>`);
@@ -456,7 +464,8 @@ function handleSend(){
     if(sdIndex>=0 && items[sdIndex]){ chooseCourseByName(items[sdIndex].dataset.name); return; }
     if(matches.length===1){ selectCourse(matches[0]); return; }
     if(matches.length>1){ showDrop(matches); return; }
-    // no match → fall through to AI
+    // no match: they typed their own question, so the programme search is over
+    state.level=null; syncInput();
   }
   sendToAI(q);
 }
@@ -527,6 +536,7 @@ async function sendToAI(q){
     renderCourseChoices((m.exact.length>1?m.exact:m.loose).slice(0,6));
   }
   if(state.course) renderOptionCards();   // keep options handy, pointed at the right programme
+  syncInput();
 }
 
 // ── Input events: live search, keyboard nav, Enter to send ───────
