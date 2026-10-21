@@ -115,18 +115,25 @@ as $$
 declare
   max_min constant int := 15;    -- keep in sync with RATE_MAX in main.py
   max_day constant int := 300;   -- keep in sync with RATE_DAY_MAX in main.py
+  key    text;
   r      public.sju_rate_limit%rowtype;
   now_ts timestamptz := now();
   today  date := (now() at time zone 'utc')::date;
   ok     boolean;
 begin
-  if p_ip is null or length(p_ip) > 64
-     or (p_ip not in ('invalid', 'unknown')
-         and p_ip !~ '^[0-9a-fA-F:.]+(/[0-9]{1,3})?$') then
-    return false;   -- not an IP/CIDR/sentinel: reject without creating a row
+  if p_ip is null or length(p_ip) > 64 then
+    return false;
+  elsif p_ip in ('invalid', 'unknown') then
+    key := p_ip;                 -- the app's two sentinels for a missing/unparseable IP
+  else
+    begin
+      key := text(p_ip::inet);   -- real IP/CIDR parse; canonical form dedupes spellings
+    exception when others then
+      return false;              -- not a valid address: reject without creating a row
+    end;
   end if;
-  insert into public.sju_rate_limit(ip) values (p_ip) on conflict (ip) do nothing;
-  select * into r from public.sju_rate_limit where ip = p_ip for update;
+  insert into public.sju_rate_limit(ip) values (key) on conflict (ip) do nothing;
+  select * into r from public.sju_rate_limit where ip = key for update;
   if now_ts - r.minute_start >= interval '60 seconds' then
     r.minute_start := now_ts; r.minute_count := 0;
   end if;
@@ -141,7 +148,7 @@ begin
   update public.sju_rate_limit
      set minute_start = r.minute_start, minute_count = r.minute_count,
          day = r.day, day_count = r.day_count
-   where ip = p_ip;
+   where ip = key;
   -- occasionally sweep rows idle for over a day, so the table can't grow forever.
   -- ponytail: random sweep; a scheduled job (pg_cron) would be tidier if it ever matters.
   if random() < 0.005 then
