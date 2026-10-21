@@ -331,7 +331,7 @@ print("answer guards OK")
 
 
 # ── Rate limit + locked health ──────────────────────────────────────────────────
-main._hits.clear(); main._hits_day.clear()
+main._rl.clear(); main._rl_day.clear()
 rl = TestClient(main.app)
 hdr = {"X-Real-IP": "203.0.113.9"}
 ok = sum(rl.post("/chat", json={"question": ""}, headers=hdr).status_code == 200 for _ in range(main.RATE_MAX))
@@ -344,23 +344,30 @@ assert rl.post("/chat", json={"question": ""}, headers={"X-Real-IP": "198.51.100
 assert rl.post("/chat", json={"question": ""},
                headers={"X-Real-IP": "203.0.113.9", "X-Forwarded-For": "1.2.3.4"}).status_code == 429
 
-# Eviction frees stale IPs but never clears an at-limit active one.
-main._hits.clear(); main._hits_day.clear()
-now = time.time(); today = int(now // 86400)
-main._hits["203.0.113.9"] = [now] * main.RATE_MAX              # active, at the minute cap
-main._hits_day["203.0.113.9"] = (today, main.RATE_MAX)
-for i in range(10001):                                         # stale filler from a past minute
-    main._hits[f"ip{i}"] = [now - 120]
-    main._hits_day[f"ip{i}"] = (today - 1, 1)
-main._evict_stale(now, today)
-assert "203.0.113.9" in main._hits and len(main._hits) < 100   # active kept, stale gone
-assert rl.post("/chat", json={"question": ""}, headers=hdr).status_code == 429   # still blocked
-main._hits.clear(); main._hits_day.clear()
+# LRU stays bounded and keeps the active abuser (most-recently-used), evicting idle IPs.
+main._rl.clear(); main._rl_day.clear()
+saved_cap = main.RATE_MAX_IPS
+main.RATE_MAX_IPS = 100
+try:
+    for _ in range(main.RATE_MAX + 1):                           # drive 203.0.113.9 to the limit
+        rl.post("/chat", json={"question": ""}, headers=hdr)
+    for i in range(300):                                         # flood distinct IPs...
+        rl.post("/chat", json={"question": ""}, headers={"X-Real-IP": f"10.0.{i // 256}.{i % 256}"})
+        if i % 20 == 0:                                          # ...while the abuser keeps hitting
+            rl.post("/chat", json={"question": ""}, headers=hdr)
+    assert len(main._rl) <= main.RATE_MAX_IPS                    # hard cap holds
+    assert "203.0.113.9" in main._rl                             # active abuser kept, not evicted
+    assert rl.post("/chat", json={"question": ""}, headers=hdr).status_code == 429   # still blocked
+finally:
+    main.RATE_MAX_IPS = saved_cap
+    main._rl.clear(); main._rl_day.clear()
 
-# IPv6 addresses in the same /64 share one bucket.
-b1 = main.client_ip(type("R", (), {"headers": {"x-real-ip": "2001:db8:1:2:aaaa::1"}, "client": None})())
-b2 = main.client_ip(type("R", (), {"headers": {"x-real-ip": "2001:db8:1:2:bbbb::9"}, "client": None})())
-assert b1 == b2 == "2001:db8:1:2::/64", (b1, b2)
+# IPv6 addresses in the same /64 share one bucket, including compressed and IPv4-mapped forms.
+def ip_of(raw):
+    return main.client_ip(type("R", (), {"headers": {"x-real-ip": raw}, "client": None})())
+assert ip_of("2001:db8:1:2:aaaa::1") == ip_of("2001:db8:1:2:bbbb::9") == "2001:db8:1:2::/64"
+assert ip_of("2001:db8::1") == ip_of("2001:db8:0:0:ffff::9") == "2001:db8::/64"   # "::" compression
+assert ip_of("not-an-ip") == "invalid" and ip_of("") == "unknown"
 
 # /health hides per-model quota unless the token matches
 main.HEALTH_TOKEN = ""
