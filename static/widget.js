@@ -24,10 +24,12 @@
     '#sjuFabDot{position:absolute;top:-3px;right:-3px;width:24px;height:24px;background:#e63946;border-radius:50%;border:3px solid #fff;font:800 12px/1 system-ui,sans-serif;color:#fff;display:flex;align-items:center;justify-content:center;animation:sjuPulse 2s ease-in-out infinite}',
     '@keyframes sjuPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}',
     '#sjuFabLabel{position:fixed;right:104px;bottom:44px;background:#fff;color:#e63946;font:800 15px/1 system-ui,sans-serif;padding:9px 18px;border-radius:22px;box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:2147482999;white-space:nowrap}',
-    '#sjuFrame{position:fixed;bottom:106px;right:24px;width:540px;height:840px;max-height:calc(100vh - 130px);border:0;border-radius:22px;box-shadow:0 12px 48px rgba(0,0,0,.22);z-index:2147482999;background:#fff;opacity:0;transform:scale(.95) translateY(12px);pointer-events:none;transition:transform .22s ease,opacity .22s ease}',
+    // frosted glass: the iframe is transparent and blurs whatever page sits behind it.
+    // color-scheme must match embed.html or Chrome paints the frame opaque.
+    '#sjuFrame{position:fixed;bottom:106px;right:24px;width:min(620px,calc(100vw - 48px));height:840px;max-height:calc(100vh - 130px);border:1px solid rgba(255,255,255,.55);border-radius:26px;color-scheme:normal;background:rgba(255,255,255,.08);-webkit-backdrop-filter:blur(28px) saturate(170%);backdrop-filter:blur(28px) saturate(170%);box-shadow:0 24px 70px rgba(10,35,64,.28),0 2px 8px rgba(10,35,64,.08);z-index:2147482999;opacity:0;transform:scale(.96) translateY(14px);transform-origin:bottom right;pointer-events:none;transition:transform .38s cubic-bezier(.2,.9,.25,1),opacity .28s ease}',
     '#sjuFrame.open{opacity:1;transform:none;pointer-events:all}',
     // phones have no room for a floating panel - take the whole screen instead
-    '@media(max-width:560px){#sjuFrame{inset:0;width:100%;height:100%;max-height:none;border-radius:0}#sjuFabLabel{display:none}}'
+    '@media(max-width:560px){#sjuFrame{inset:0;width:100%;height:100%;max-height:none;border:0;border-radius:0}#sjuFabLabel{display:none}}'
   ].join('\n');
   document.head.appendChild(css);
 
@@ -46,6 +48,7 @@
   frame.id = 'sjuFrame';
   frame.title = 'SJU Assistant';
   frame.setAttribute('allow', 'clipboard-write');
+  frame.setAttribute('allowtransparency', 'true');
 
   var open = false, loaded = false;
   function toggle() {
