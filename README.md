@@ -35,7 +35,7 @@ FastAPI  /chat  (main.py)
      │        notices: the important-dates and announcements pages, read
      │        while the student waits (cached 15 min)
      │
-     └─► Gemini — first free-tier model with quota left (8 in rotation)
+     └─► Gemini 3.8 Flash (paid key); 7 fallback models if it's overloaded
               system prompt = live pages + stored chunks + built-in facts
               → answer streams back word by word
 ```
@@ -78,7 +78,7 @@ doesn't browse. Guard rails in `main.py` keep answers accurate and safe:
 ## Tech stack
 
 - **Backend:** FastAPI + Python (Vercel Python serverless)
-- **AI:** Google Gemini free tier, rotating across 8 models (`MODELS` in `main.py`)
+- **AI:** Google Gemini 3.8 Flash on a billed key, with 7 fallback models (`MODELS` in `main.py`)
 - **Knowledge base:** Supabase (Postgres) full-text search
 - **Frontend:** plain HTML/JS, no framework — `static/embed.html` (chat UI),
   `static/widget.js` (one-tag embed loader + Joey button/greeting),
@@ -103,12 +103,13 @@ rate limit runs in memory per instance (see **Rate limiting** below).
 
 ## Model rotation and streaming
 
-Each Gemini free-tier model has its own quota (a few requests per minute and
-20–500 per day), so `main.py` rotates through eight of them. Together that is
-about 60 requests a minute and 1,100+ a day before Gemma's large daily pool.
+The key has billing on, so every question goes to `gemini-3.8-flash` (thinking
+level "low"): in a side-by-side test it gave the most precise answers and started
+in ~1.6–2 s. Pro models took ~7.6 s to start with no better answers. If it is
+overloaded, `main.py` falls back through seven more models.
 
-- **Order is fastest first.** The first six start answering in ~1–2 s; the
-  last two need a higher thinking level and add ~8 s.
+- **Order is best first.** Gemini 3.8 Flash, then the fast fallbacks (~1–2 s),
+  then 3.7 Flash.
 - **No waiting on full models.** The server counts each model's requests per
   minute, per day and tokens per minute, and only calls one with room left.
 - **Fails over fast.** A 429 or 503 comes back in under a second and the next

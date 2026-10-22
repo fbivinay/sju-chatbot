@@ -95,14 +95,15 @@ answer, called = ask({m: (400, "{}") for m in M})
 assert (answer, called) == (main.BUSY_MSG, M) and all(skipped_for(m) <= 0 for m in M)
 
 # Our own counts keep a model out before Google has to say no: RPM, RPD, then a new day.
+RPM, RPD = main.MODELS[0][1:3]
 reset()
-for _ in range(5):
-    ask({M[0]: (200, sse("ok"))})
+main._recent[M[0]] = [(time.time(), 10)] * (RPM - 1)
+ask({M[0]: (200, sse("ok"))})
 assert ask({M[0]: (200, sse("A")), M[1]: (200, sse("B"))}) == ("B", [M[1]])
 reset()
-main._today[M[0]] = 20
+main._today[M[0]] = RPD
 assert ask({M[0]: (200, sse("A")), M[1]: (200, sse("B"))}) == ("B", [M[1]])
-main._quota_day -= 1   # those 20 were yesterday's
+main._quota_day -= 1   # those were yesterday's
 assert ask({M[0]: (200, sse("A"))}) == ("A", [M[0]])
 
 # Gemma's 16K tokens-per-minute: a full minute's budget skips it.

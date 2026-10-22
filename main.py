@@ -551,25 +551,23 @@ async def gather_context(question: str) -> str:
 # ════════════════════════════════════════════════════════════════════════════
 # GEMINI MODEL ROTATION
 # ════════════════════════════════════════════════════════════════════════════
-# Every free-tier model has its own quota, so rotating through several multiplies
-# capacity. The limits are this key's free tier (AI Studio > Rate limits, Oct 2026);
-# update them here if Google changes them.
-#
-# Order = fastest first: the first six start answering in ~1-2s. The last two reject
-# thinkingLevel "minimal", and "low" adds ~8s before the first word.
-# Left out: gemini-2.5-flash / 2.5-flash-lite (404 "no longer available to new
-# users") and gemma-4-31b-it (17-30s before the first word).
+# The key has billing on (Oct 2026), so every question goes to gemini-3.8-flash: the
+# newest Flash, the most precise in a side-by-side test, first word in ~1.6-2s. Pro
+# models (3.1-pro, pro-latest) took ~7.6s to start with no better answers. Its
+# limits are set high; Google's 429 is the real cap. The rest, with their free-tier
+# limits, are fallbacks for when it's overloaded.
+# Left out: gemma-4-31b-it (17-30s before the first word).
 # "wait" = seconds to wait for the first word before moving on to the next model.
 #
-#  model                     RPM     RPD      TPM  wait  thinkingLevel
+#  model                     RPM     RPD        TPM  wait  thinkingLevel
 MODELS = [
+    ("gemini-3.8-flash",     1000, 50_000, 2_000_000,   8, "low"),   # rejects "minimal"
     ("gemini-3.6-flash",        5,     20, 250_000,   6, "minimal"),
     ("gemini-3-flash-preview",  5,     20, 250_000,   6, "minimal"),
     ("gemini-3.5-flash",        5,     20, 250_000,   6, "minimal"),
     ("gemini-3.5-flash-lite",  15,    500, 250_000,   6, "minimal"),
     ("gemini-3.1-flash-lite",  15,    500, 250_000,   6, "minimal"),
     ("gemma-4-26b-a4b-it",     30, 14_400,  16_000,   6, "minimal"),
-    ("gemini-3.8-flash",        5,     20, 250_000,  15, "low"),
     ("gemini-3.7-flash",        5,     20, 250_000,  15, "low"),
 ]
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{}:streamGenerateContent?alt=sse"
