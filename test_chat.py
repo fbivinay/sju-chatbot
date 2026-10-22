@@ -68,7 +68,9 @@ def ask(responses, sent=None):
 
 # A healthy first model answers; its thinking never reaches the student.
 reset()
-assert ask({M[0]: (200, sse("Hello ", "there", thought="planning..."))}) == ("Hello there", [M[0]])
+sent = []
+assert ask({M[0]: (200, sse("Hello ", "there", thought="planning..."))}, sent) == ("Hello there", [M[0]])
+assert sent[0]["tools"] == [{"google_search": {}}]   # Gemini may search for what the content lacks
 
 # Daily quota used up: benched until the next reset, the next model answers.
 reset()
