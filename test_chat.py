@@ -355,6 +355,9 @@ keep = "[FAQ](https://www.sju.edu.in/faq) "
 assert main.drop_unknown_links(keep, allowed) == keep
 assert main.drop_unknown_links("[MSc BDA](http://sju.edu.in/programmes/msc-in-big-data-analytics/) ", allowed).endswith("analytics/) ")
 assert main.drop_unknown_links("[Report format](https://www.sju.edu.in/pg-project-report-format.pdf). ", allowed) == "[Report format]. "
+# A link cut off before its ")" is dropped, even when its start looks allowed (fails closed).
+assert main.drop_unknown_links("[x](https://www.sju.edu.in/faq", allowed) == "[x]"
+assert main.drop_unknown_links("[x](https://evil.example/a[cite:", allowed) == "[x]"
 
 # Google's "[cite: 1]" markers are removed, even when split across streamed pieces.
 async def fake_stream(body):

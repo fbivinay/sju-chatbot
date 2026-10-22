@@ -517,9 +517,10 @@ CITE = re.compile(r" ?\[cite:[^\]]*\]")
 def drop_unknown_links(piece: str, allowed: set) -> str:
     """[text](url) whose url isn't in the prompt becomes plain text - the model invents
     plausible SJU paths that 404. Streamed pieces end at whitespace, so a URL is never
-    split across two pieces; the browser drops the leftover "[" of "[text]"."""
-    return re.sub(r"\]\((https?://[^)\s]+)\)",
-                  lambda m: m[0] if _url_key(m[1]) in allowed else "]", piece)
+    split across two pieces; the browser drops the leftover "[" of "[text]". Fails
+    closed: a "](url" without its ")" in this piece is dropped too, never let through."""
+    return re.sub(r"\]\((https?://[^)\s]*)(\))?",
+                  lambda m: m[0] if m[2] and _url_key(m[1]) in allowed else "]", piece)
 
 
 async def gather_context(question: str) -> str:
@@ -781,11 +782,11 @@ async def answer_stream(req: ChatRequest):
         # Searched answers can carry Google's "[cite: 1]" markers.
         text = CITE.sub("", drop_unknown_links(text, allowed))
         return text.replace(" (passed)", "").replace("(passed)", "")
-    held = ""   # an unclosed "[" waits for its "]", so "[cite: 1]" is never split across pieces
+    held = ""   # an unclosed "[cite:" waits for its "]", so it's never split across pieces
     try:
         async for text in gemini_stream(body):
             text, held = held + text, ""
-            if (i := text.rfind("[")) != -1 and "]" not in text[i:] and len(text) - i < 300:
+            if (i := text.rfind("[cite:")) != -1 and "]" not in text[i:] and len(text) - i < 300:
                 i = len(text[:i].rstrip(" "))   # the space before it goes with it
                 text, held = text[:i], text[i:]
             if text:
