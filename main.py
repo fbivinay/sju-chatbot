@@ -551,24 +551,23 @@ async def gather_context(question: str) -> str:
 # ════════════════════════════════════════════════════════════════════════════
 # GEMINI MODEL ROTATION
 # ════════════════════════════════════════════════════════════════════════════
-# The key has billing on (Oct 2026). Every question goes to gemini-3.5-flash-lite:
-# first word in ~0.7s (fastest tested), answers as accurate as 3.8 Flash on fees,
-# deadlines, counts and officials, at ~$0.003 a message ($0.30/$2.50 per 1M tokens)
-# vs ~$0.013 for 3.8 Flash from Jan 2027. Its limits are set high; Google's 429 is
-# the real cap. The rest are fallbacks for when it's overloaded, cheapest first.
-# Pro models (3.1-pro, pro-latest) took ~7.6s to start with no better answers.
+# The key has billing on (Oct 2026), so every question goes to gemini-3.8-flash: the
+# newest Flash, the most precise in a side-by-side test, first word in ~1.6-2s. Pro
+# models (3.1-pro, pro-latest) took ~7.6s to start with no better answers. Its
+# limits are set high; Google's 429 is the real cap. The rest, with their free-tier
+# limits, are fallbacks for when it's overloaded.
 # Left out: gemma-4-31b-it (17-30s before the first word).
 # "wait" = seconds to wait for the first word before moving on to the next model.
 #
 #  model                     RPM     RPD        TPM  wait  thinkingLevel
 MODELS = [
-    ("gemini-3.5-flash-lite", 1000, 50_000, 2_000_000,   6, "minimal"),
-    ("gemini-3.1-flash-lite",   15,    500,   250_000,   6, "minimal"),
-    ("gemini-3-flash-preview",   5,     20,   250_000,   6, "minimal"),
-    ("gemma-4-26b-a4b-it",     30, 14_400,  16_000,   6, "minimal"),
-    ("gemini-3.5-flash",        5,     20, 250_000,   6, "minimal"),
+    ("gemini-3.8-flash",     1000, 50_000, 2_000_000,   8, "low"),   # rejects "minimal"
     ("gemini-3.6-flash",        5,     20, 250_000,   6, "minimal"),
-    ("gemini-3.8-flash",        5,     20, 250_000,   8, "low"),   # rejects "minimal"
+    ("gemini-3-flash-preview",  5,     20, 250_000,   6, "minimal"),
+    ("gemini-3.5-flash",        5,     20, 250_000,   6, "minimal"),
+    ("gemini-3.5-flash-lite",  15,    500, 250_000,   6, "minimal"),
+    ("gemini-3.1-flash-lite",  15,    500, 250_000,   6, "minimal"),
+    ("gemma-4-26b-a4b-it",     30, 14_400,  16_000,   6, "minimal"),
     ("gemini-3.7-flash",        5,     20, 250_000,  15, "low"),
 ]
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{}:streamGenerateContent?alt=sse"
