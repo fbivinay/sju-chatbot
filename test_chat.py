@@ -356,6 +356,25 @@ assert main.drop_unknown_links(keep, allowed) == keep
 assert main.drop_unknown_links("[MSc BDA](http://sju.edu.in/programmes/msc-in-big-data-analytics/) ", allowed).endswith("analytics/) ")
 assert main.drop_unknown_links("[Report format](https://www.sju.edu.in/pg-project-report-format.pdf). ", allowed) == "[Report format]. "
 
+# Google's "[cite: 1]" markers are removed, even when split across streamed pieces.
+async def fake_stream(body):
+    for piece in ["Cycle 1: 15 January 2026 [cite: ", "1] and [cite: 2, 3]", " closed. "]:
+        yield piece
+real_stream, main.gemini_stream = main.gemini_stream, fake_stream
+real_ctx, main.gather_context = main.gather_context, lambda q: asyncio.sleep(0, "")
+async def collect():
+    return "".join([t async for t in main.answer_stream(main.ChatRequest(question="mca"))])
+try:
+    got = asyncio.run(collect())
+finally:
+    main.gemini_stream, main.gather_context = real_stream, real_ctx
+assert got == "Cycle 1: 15 January 2026 and closed. ", got
+
+# The prompt opens with the same text for every question (billed at 10% when repeated);
+# the date and per-question content come last.
+assert main.SYSTEM_PROMPT.index("=== SJU KNOWLEDGE BASE ===") < main.SYSTEM_PROMPT.index("{today}") \
+    < main.SYSTEM_PROMPT.index("{extra}")
+
 # The AI gets the same programme list - and counts - as the chat's UG/PG buttons.
 assert "Undergraduate - 40 programmes:" in main.KNOWLEDGE and "PhD - 13 programmes:" in main.KNOWLEDGE
 
