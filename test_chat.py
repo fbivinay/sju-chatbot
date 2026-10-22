@@ -244,7 +244,7 @@ try:
             context = asyncio.run(main.gather_context(question))
         finally:
             restore()
-        assert fetched == expected, (question, fetched)
+        assert fetched == expected + [main.HOME_PAGE], (question, fetched)
         assert "stored MCA text" in context and "stored hostel text" in context
         assert ("=== LIVE FROM THE OFFICIAL SJU WEBSITE" in context) == bool(expected)
     assert "last date 5 January 2027" not in context   # the syllabus question read nothing live
@@ -260,6 +260,23 @@ try:
         restore()
     assert all(f"Cycle {c}: Programme Name: Master of Computer Applications (MCA);" in mca for c in (1, 2, 3)), mca[:600]
     assert "Programme Name: Master of Science (M.Sc.) in Computer Science;" in msc_cs, msc_cs[:600]
+    # "Who is the registrar" reads the officials pages; a word in the homepage menu reads
+    # the page it links to; event links and off-site links are never followed.
+    MGMT = main.OFFICIALS_PAGES[0]
+    OMBUD = "https://www.sju.edu.in/about/ombudsperson.php"
+    home = ('<a href="/about/ombudsperson.php">Ombud Person</a><a href="events-detail.php?slug=ombudsperson-talk">'
+            'Ombudsperson talk</a><a href="https://evil.example/ombudsperson">x</a>')
+    main._live_cache.clear()
+    fetched, restore = serve({MGMT: "<p>Dr Syed Wajeed Registrar Member Secretary</p>", main.HOME_PAGE: home,
+                              OMBUD: "<p>Ombudsperson: Dr A</p>"})
+    try:
+        reg = asyncio.run(main.gather_context("Who is the registrar?"))
+        ombud = asyncio.run(main.gather_context("Who is the ombudsperson"))
+    finally:
+        restore()
+    assert "Dr Syed Wajeed Registrar" in reg, reg[:400]
+    assert "Ombudsperson: Dr A" in ombud and OMBUD in fetched
+    assert not any("evil" in u or "detail" in u for u in fetched), fetched
 finally:
     main.search_kb = real_search
 

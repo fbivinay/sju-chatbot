@@ -2,7 +2,8 @@
 SJU Chatbot
 Strong built-in knowledge that ALWAYS answers common questions.
 Adds the matching chunks of the Supabase knowledge base (sju.edu.in, scraped daily)
-and, for questions about dates, deadlines or notices, reads those pages of the official site live.
+and reads the official site live: the dates and notices pages, the officials pages for
+"who is the Registrar/VC/Dean" questions, and any page the homepage menu links under the question's words.
 Answers stream from Gemini, rotating across free-tier models as limits fill up.
 """
 import asyncio
@@ -338,12 +339,21 @@ def search_kb(question: str) -> list:
 IST = timezone(timedelta(hours=5, minutes=30))   # India has no daylight saving
 DATES_PAGE = "https://www.sju.edu.in/important-dates.php"
 NEWS_PAGE = "https://www.sju.edu.in/announcements.php"
-PAGE_TITLES = {DATES_PAGE: "Important dates & admission timeline", NEWS_PAGE: "Announcements"}
+HOME_PAGE = "https://www.sju.edu.in/"
+# Who holds which office: Registrar, VC, Pro-VCs (management), Deans and COE (academic council).
+# Search over the daily snapshot misses these names among the many pages that say "Registrar".
+OFFICIALS_PAGES = ["https://www.sju.edu.in/about/management.php", "https://www.sju.edu.in/about/academic-council.php"]
+PAGE_TITLES = {DATES_PAGE: "Important dates & admission timeline", NEWS_PAGE: "Announcements",
+               OFFICIALS_PAGES[0]: "University management", OFFICIALS_PAGES[1]: "Academic council"}
 TIME_WORDS = {"date", "dates", "deadline", "last", "apply", "application", "applications", "admission",
               "admissions", "open", "opens", "closed", "entrance", "sjuet", "exam", "exams", "result",
               "results", "timetable", "schedule", "when", "interview", "orientation", "2026", "2027"}
 NEWS_WORDS = {"notice", "notices", "announcement", "announcements", "news", "event", "events", "holiday",
               "holidays", "circular", "latest", "today", "update", "updates", "convocation"}
+OFFICIAL_WORDS = {"registrar", "chancellor", "vc", "pvc", "principal", "controller", "coe", "dean", "deans",
+                  "officials", "management", "rector", "ombudsperson"}
+# Too common in the site menu to pick a page by
+MENU_NOISE = {"department", "school", "programme", "programmes", "course", "courses", "student", "students"}
 STOP_WORDS = {"the", "and", "for", "what", "which", "who", "how", "are", "sju", "joseph", "university",
               "about", "tell", "can", "you", "please", "with", "does", "there", "this", "that", "from"}
 SJU_URL = re.compile(r"https://([a-z0-9-]+\.)*sju\.edu\.in/")
@@ -416,8 +426,8 @@ def relevant(text: str, terms: list, budget: int = 3500) -> str:
     return " … ".join(pieces[i].strip() for i in sorted(keep))
 
 
-async def read_live(urls: list) -> dict:
-    """url -> current page text, for the pages that could be read (cached 15 min)."""
+async def read_live(urls: list, raw: bool = False) -> dict:
+    """url -> current page text (or HTML), for the pages that could be read (cached 15 min)."""
     out, todo, now = {}, [], time.time()
     for url in urls:
         hit = _live_cache.get(url)
@@ -432,7 +442,7 @@ async def read_live(urls: list) -> dict:
                 r = await client.get(url)
                 # Redirects are followed, but only to SJU's own site.
                 if r.status_code == 200 and SJU_URL.match(str(r.url)) and "html" in r.headers.get("content-type", ""):
-                    return page_text(r.text)
+                    return r.text
                 print(f"Live {url}: HTTP {r.status_code} {r.url}")
             except httpx.HTTPError as e:
                 print(f"Live {url}: {type(e).__name__}")
@@ -441,14 +451,32 @@ async def read_live(urls: list) -> dict:
         async with httpx.AsyncClient(timeout=httpx.Timeout(3.0, connect=2.0), follow_redirects=True,
                                      headers={"User-Agent": "Mozilla/5.0 (compatible; SJU-Assistant)"}) as client:
             texts = await asyncio.gather(*(fetch(client, u) for u in todo))
-        if len(_live_cache) > 300:   # ponytail: crude cap, swap for an LRU if pages ever churn
+        if len(_live_cache) > 100:   # raw HTML, ~0.5 MB a page. ponytail: crude cap, LRU if pages churn
             _live_cache.clear()
         for url, text in zip(todo, texts):
             _live_cache[url] = (time.time(), text)
             if text:
                 out[url] = text
         print(f"Live: read {sum(t is not None for t in texts)}/{len(todo)} pages in {time.monotonic() - started:.1f}s")
-    return out
+    return out if raw else {url: page_text(h) for url, h in out.items()}
+
+
+def menu_matches(home_html: str, terms: list, limit: int = 2) -> list:
+    """Official pages whose link text or address on the SJU homepage menu names what the
+    question is about ("ombudsperson", "hostel", "iqac") - read live, so the bot isn't
+    limited to what the daily search happened to rank."""
+    want = set(terms) - MENU_NOISE
+    if not want:
+        return []
+    scored = {}
+    for href, label in re.findall(r'(?is)<a\b[^>]*\bhref="([^"#]+)"[^>]*>(.*?)</a>', home_html):
+        url = httpx.URL(HOME_PAGE).join(href.strip())
+        if not SJU_URL.match(str(url)) or "-detail" in url.path:   # events/news: covered by announcements
+            continue
+        words = set(re.findall(r"[a-z0-9]+", f"{strip_tags(label)} {url.path}".lower()))
+        if hits := len(want & words):
+            scored[str(url)] = max(hits, scored.get(str(url), 0))
+    return sorted(scored, key=scored.get, reverse=True)[:limit]
 
 
 MONTHS = {m: i for i, m in enumerate(
@@ -490,17 +518,20 @@ def drop_unknown_links(piece: str, allowed: set) -> str:
 async def gather_context(question: str) -> str:
     """Knowledge-base matches plus the live official pages, as one block for the prompt."""
     words = set(re.findall(r"[a-z0-9]+", question.lower()))
-    pages = ([DATES_PAGE] if words & TIME_WORDS else []) + ([NEWS_PAGE] if words & NEWS_WORDS else [])
-    # The Supabase client is synchronous; run it off the event loop so other students'
-    # answers keep streaming, and read the live pages meanwhile. Other pages aren't
-    # re-read live: the knowledge base is re-scraped daily, and dates and notices are
-    # what changes within a day.
-    rows, live = await asyncio.gather(asyncio.to_thread(search_kb, question), read_live(pages))
-
+    pages = (([DATES_PAGE] if words & TIME_WORDS else []) + ([NEWS_PAGE] if words & NEWS_WORDS else [])
+             + (OFFICIALS_PAGES if words & OFFICIAL_WORDS else []))
     # Passages are picked by what the question is about ("mca"), not by the words that
     # chose the page ("last date to apply"), which every row of the dates table shares.
     terms = [w for w in re.findall(r"[a-z0-9]+", expand(question).lower())
              if len(w) > 2 and w not in STOP_WORDS | TIME_WORDS | NEWS_WORDS]
+    # The Supabase client is synchronous; run it off the event loop so other students'
+    # answers keep streaming, and read the live pages and the homepage menu meanwhile.
+    rows, live, home = await asyncio.gather(asyncio.to_thread(search_kb, question), read_live(pages),
+                                            read_live([HOME_PAGE], raw=True))
+    # Then the official pages the menu links to under the question's own words.
+    more = [u for u in menu_matches(home.get(HOME_PAGE, ""), terms) if u not in live]
+    if more:
+        live |= await read_live(more)
     titles = {r.get("source_url"): r.get("page_name") for r in rows}
     parts = []
     if live:
