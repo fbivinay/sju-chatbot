@@ -71,6 +71,18 @@ reset()
 sent = []
 assert ask({M[0]: (200, sse("Hello ", "there", thought="planning..."))}, sent) == ("Hello there", [M[0]])
 assert sent[0]["tools"] == [{"google_search": {}}]   # Gemini may search for what the content lacks
+# A searched answer counts toward the daily cap; at the cap, search isn't offered.
+GROUNDED = "data: " + json.dumps({"candidates": [{"content": {"parts": [{"text": "ok"}]},
+                                                  "groundingMetadata": {"webSearchQueries": ["q"]}}]}) + "\n\n"
+main._searches[:] = [int(time.time() // 86400), main.SEARCH_DAY_MAX - 1]
+reset()
+ask({M[0]: (200, GROUNDED)})
+assert main._searches[1] == main.SEARCH_DAY_MAX
+sent = []
+reset()
+ask({M[0]: (200, sse("ok"))}, sent)
+assert "tools" not in sent[0]
+main._searches[:] = [0, 0]
 
 # Daily quota used up: benched until the next reset, the next model answers.
 reset()

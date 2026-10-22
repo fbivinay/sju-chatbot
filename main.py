@@ -559,7 +559,12 @@ async def gather_context(question: str) -> str:
 # Left out: gemma-4-31b-it (17-30s before the first word).
 # Gemini models get Google Search for what the SJU content doesn't answer (5,000
 # searches/month free, then $14 per 1,000); a search adds ~3-5s before the first
-# word, hence 3.8 Flash's longer wait. Gemma can't search.
+# word, hence 3.8 Flash's longer wait. Gemma can't search. A prompt can talk the
+# model into searching, so the cap is enforced here, not by the prompt: past
+# SEARCH_DAY_MAX searched answers a day the tool isn't offered.
+# ponytail: per-instance count; move to Supabase like sju_rate_check if instances multiply spend.
+SEARCH_DAY_MAX = 150   # ~5,000 free a month
+_searches = [0, 0]     # [day, searched answers that day]
 # "wait" = seconds to wait for the first word before moving on to the next model.
 #
 #  model                     RPM     RPD        TPM  wait  thinkingLevel
@@ -637,6 +642,10 @@ async def gemini_stream(body: dict):
     deadline = time.monotonic() + 60
     tried, rejected = set(), []
     partial = ""   # answer streamed so far, by whichever models managed it
+    day = int(time.time() // 86400)
+    if _searches[0] != day:
+        _searches[:] = [day, 0]
+    search_ok = _searches[1] < SEARCH_DAY_MAX
     async with httpx.AsyncClient() as client:
         while pick := _pick(tokens, tried):
             model, wait, thinking = pick
@@ -650,11 +659,11 @@ async def gemini_stream(body: dict):
                                             {"role": "user", "parts": [{"text": CONTINUE}]}] if partial else [])
             # thinking tokens count toward maxOutputTokens, so leave plenty of room
             payload = {**body, "contents": contents,
-                       **({"tools": [{"google_search": {}}]} if model.startswith("gemini") else {}),
+                       **({"tools": [{"google_search": {}}]} if model.startswith("gemini") and search_ok else {}),
                        "generationConfig": {"maxOutputTokens": 2048, "temperature": 0.3,
                                             "thinkingConfig": {"thinkingLevel": thinking}}}
             started = time.monotonic()
-            answered, broke, finished, word = False, False, False, ""
+            answered, broke, finished, word, counted = False, False, False, "", False
             try:
                 # Key in a header, not the URL - httpx logs request URLs to Vercel logs.
                 async with client.stream("POST", GEMINI_URL.format(model), json=payload,
@@ -691,8 +700,10 @@ async def gemini_stream(body: dict):
                             broke = True
                             break
                         cand = (chunk.get("candidates") or [{}])[0]
-                        if searched := cand.get("groundingMetadata", {}).get("webSearchQueries"):
-                            print(f"Gemini {model}: searched Google for {searched}")   # billed past 5,000/month
+                        if cand.get("groundingMetadata", {}).get("webSearchQueries") and not counted:
+                            counted = True
+                            _searches[1] += 1   # count only - the queries may hold a student's details
+                            print(f"Gemini {model}: searched Google ({_searches[1]} today)")
                         for part in cand.get("content", {}).get("parts", []):
                             if part.get("text") and not part.get("thought"):
                                 if not answered:
