@@ -35,7 +35,7 @@ FastAPI  /chat  (main.py)
      │        notices: the important-dates and announcements pages, read
      │        while the student waits (cached 15 min)
      │
-     └─► Gemini 3.8 Flash (paid key); 7 fallback models if it's overloaded
+     └─► Gemini 3.5 Flash-Lite (paid key); 7 fallback models if it's overloaded
               system prompt = live pages + stored chunks + built-in facts
               → answer streams back word by word
 ```
@@ -78,7 +78,7 @@ doesn't browse. Guard rails in `main.py` keep answers accurate and safe:
 ## Tech stack
 
 - **Backend:** FastAPI + Python (Vercel Python serverless)
-- **AI:** Google Gemini 3.8 Flash on a billed key, with 7 fallback models (`MODELS` in `main.py`)
+- **AI:** Google Gemini 3.5 Flash-Lite on a billed key, with 7 fallback models (`MODELS` in `main.py`)
 - **Knowledge base:** Supabase (Postgres) full-text search
 - **Frontend:** plain HTML/JS, no framework — `static/embed.html` (chat UI),
   `static/widget.js` (one-tag embed loader + Joey button/greeting),
@@ -103,13 +103,13 @@ rate limit runs in memory per instance (see **Rate limiting** below).
 
 ## Model rotation and streaming
 
-The key has billing on, so every question goes to `gemini-3.8-flash` (thinking
-level "low"): in a side-by-side test it gave the most precise answers and started
-in ~1.6–2 s. Pro models took ~7.6 s to start with no better answers. If it is
-overloaded, `main.py` falls back through seven more models.
+The key has billing on, so every question goes to `gemini-3.5-flash-lite`: in a
+side-by-side test it started answering in ~0.7 s (fastest of all), was as accurate
+as 3.8 Flash, and costs about $0.003 a message, roughly $30 (~₹2,500) a month at
+10,000 messages, against ~$128 for 3.8 Flash from January 2027. Pro models took
+~7.6 s to start with no better answers. If it is overloaded, `main.py` falls back
+through seven more models, cheapest first.
 
-- **Order is best first.** Gemini 3.8 Flash, then the fast fallbacks (~1–2 s),
-  then 3.7 Flash.
 - **No waiting on full models.** The server counts each model's requests per
   minute, per day and tokens per minute, and only calls one with room left.
 - **Fails over fast.** A 429 or 503 comes back in under a second and the next
