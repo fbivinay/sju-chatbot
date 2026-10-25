@@ -5,7 +5,7 @@ questions about programmes, admissions, fees, campus, placements and more. A Fas
 backend serves a demo clone of sju.edu.in with an embedded chat widget, powered by
 Google Gemini and grounded in real content read from the university site.
 
-Live demo: **https://sju-chatbot.vercel.app** (deployed to Vercel as a Python
+Live demo: **https://sju-chatbot.outpace-technologies.company** (deployed to Vercel as a Python
 serverless function; the chat widget works on any device, the demo site itself is
 laptop/desktop only).
 
@@ -147,7 +147,7 @@ it with one tag placed just before `</body>` on any page (PHP, WordPress,
 plain HTML — it makes no difference):
 
 ```html
-<script src="https://sju-chatbot.vercel.app/static/widget.js" defer></script>
+<script src="https://sju-chatbot.outpace-technologies.company/static/widget.js" defer></script>
 ```
 
 That is the whole integration. `widget.js` adds a floating button and opens
