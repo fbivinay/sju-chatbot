@@ -159,3 +159,25 @@ begin
 end $$;
 revoke execute on function public.sju_rate_check(text) from public;
 grant  execute on function public.sju_rate_check(text) to anon, authenticated, service_role;
+
+-- Heartbeat for .github/workflows/refresh-knowledge.yml. Supabase pauses a free
+-- project after 7 days without activity; the daily scrape writes nothing when it
+-- captures nothing (site down), so this writes one timestamp twice a day regardless.
+create table if not exists public.keepalive (
+  id int primary key,
+  pinged_at timestamptz not null default now()
+);
+alter table public.keepalive enable row level security;
+revoke all on public.keepalive from anon, authenticated;
+
+create or replace function public.keepalive()
+returns timestamptz
+language sql
+set search_path = ''
+as $$
+  insert into public.keepalive (id, pinged_at) values (1, now())
+  on conflict (id) do update set pinged_at = now()
+  returning pinged_at;
+$$;
+revoke execute on function public.keepalive() from public, anon, authenticated;
+grant  execute on function public.keepalive() to service_role;
