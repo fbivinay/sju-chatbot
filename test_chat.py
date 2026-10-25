@@ -243,15 +243,21 @@ finally:
     restore()
 
 # Choosing pages: a deadline question reads the important-dates page live, next to the
-# knowledge-base chunks; a notices question reads announcements; anything else reads nothing.
+# knowledge-base chunks; a notices question gets the notice list; anything else reads nothing.
 rows = [{"content": "stored MCA text", "source_url": MCA, "page_name": "mca"},
         {"content": "stored hostel text", "source_url": "https://www.sju.edu.in/hostel.php", "page_name": "hostel"}]
 real_search = main.search_kb
 main.search_kb = lambda q: rows
-pages = {main.DATES_PAGE: "<p>MCA: last date 5 January 2027</p>", main.NEWS_PAGE: "<p>6 October: exam notice</p>"}
+def card(href, title):
+    return f'<div class="event-content"><a href="{href}"><p>date</p><h5>{title}</h5></a></div>'
+NEWS = (card("https://sjudata.s3.ap-south-1.amazonaws.com/Notice+%E2%80%93+Hall+Ticket(End+Sem).pdf",
+             "22 October 2026 : Notice - Hall Ticket (End Semester October 2026)")
+        + card("announcement-detail.php?slug=special-holiday", "17 October 2026 : Notice - Special Holiday")
+        + card("https://sjudata.s3.ap-south-1.amazonaws.com/a/Rank+Holders.pdf", "17 August 2026 : Provisional Rank Holders List"))
+pages = {main.DATES_PAGE: "<p>MCA: last date 5 January 2027</p>", main.NEWS_PAGE: NEWS}
 try:
     for question, expected in [("When is the last date to apply for MCA?", [main.DATES_PAGE]),
-                               ("Any latest announcements?", [main.NEWS_PAGE]),
+                               ("Any latest announcements?", []),
                                ("Tell me about the MCA syllabus", [])]:
         main._live_cache.clear()
         fetched, restore = serve(pages)
@@ -259,10 +265,27 @@ try:
             context = asyncio.run(main.gather_context(question))
         finally:
             restore()
-        assert fetched == expected + [main.HOME_PAGE], (question, fetched)
+        assert sorted(fetched) == sorted(expected + [main.HOME_PAGE, main.NEWS_PAGE]), (question, fetched)
         assert "stored MCA text" in context and "stored hostel text" in context
         assert ("=== LIVE FROM THE OFFICIAL SJU WEBSITE" in context) == bool(expected)
     assert "last date 5 January 2027" not in context   # the syllabus question read nothing live
+    assert "SJU ANNOUNCEMENTS" not in context            # and no notice names its words
+
+    # Notices: a title naming the question's words is listed first with its own link, even
+    # without "notice" in the question; "(", ")" are escaped so the Markdown link holds.
+    main._live_cache.clear()
+    fetched, restore = serve(pages)
+    try:
+        hall = asyncio.run(main.gather_context("When will I get my hall ticket?"))
+        latest = asyncio.run(main.gather_context("Any latest announcements?"))
+    finally:
+        restore()
+    notes = hall.split("=== SJU ANNOUNCEMENTS")[1].splitlines()
+    assert notes[1] == ("- 22 October 2026 : Notice - Hall Ticket (End Semester October 2026) "
+                        "(https://sjudata.s3.ap-south-1.amazonaws.com/Notice+%E2%80%93+Hall+Ticket%28End+Sem%29.pdf)"), notes
+    assert "(passed)" not in notes[1]
+    assert "https://www.sju.edu.in/announcement-detail.php?slug=special-holiday" in latest
+    assert all(main._url_key(u) in main.known_urls(hall) for _, u in main.notices(NEWS)[:1])
 
     # The deadline question gets the named programme's row from every cycle - picking by
     # its "last date to apply" once sent Gemini the column headings instead.
